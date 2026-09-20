@@ -1,0 +1,50 @@
+{
+  "checked_at": "2026-09-18T15:29:03.447983+00:00",
+  "frameworks": {
+    "/Library/Developer/PrivateFrameworks/CoreSimulator.framework/Versions/A/CoreSimulator": false,
+    "/Applications/Xcode.app/Contents/Frameworks/IDESimulatorFoundation.framework/Versions/A/IDESimulatorFoundation": true
+  },
+  "staged_workspace_exists": true,
+  "checks": [
+    {
+      "name": "docker_info",
+      "command": [
+        "docker",
+        "info",
+        "--format",
+        "{{.ServerVersion}}"
+      ],
+      "timeout_seconds": 20,
+      "executable": "/usr/local/bin/docker",
+      "status": "timeout",
+      "exit_code": null,
+      "output": ""
+    },
+    {
+      "name": "xcode_version",
+      "command": [
+        "xcodebuild",
+        "-version"
+      ],
+      "timeout_seconds": 20,
+      "executable": "/usr/bin/xcodebuild",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "Xcode 26.3\nBuild version 17C529\n"
+    },
+    {
+      "name": "simulator_sdk",
+      "command": [
+        "xcrun",
+        "--sdk",
+        "iphonesimulator",
+        "--show-sdk-path"
+      ],
+      "timeout_seconds": 20,
+      "executable": "/usr/bin/xcrun",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.2.sdk\n"
+    }
+  ]
+}

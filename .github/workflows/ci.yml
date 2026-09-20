@@ -1,0 +1,39 @@
+name: Core verification
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: local-only-ci-password
+          POSTGRES_DB: healthloop_test_ci
+          POSTGRES_INITDB_ARGS: "-c max_connections=160"
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.7.1
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm typecheck:edge
+      - run: pnpm test:edge
+      - run: pnpm mobile:bundle
+      - run: pnpm test:db && pnpm test:integration
+        env:
+          HEALTHLOOP_TEST_DATABASE_URL: postgres://postgres:local-only-ci-password@127.0.0.1:5432/healthloop_test_ci
+          HEALTHLOOP_ALLOW_DB_RESET: local-only
+      - run: node scripts/manual-gates.mjs

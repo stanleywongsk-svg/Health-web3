@@ -1,0 +1,11 @@
+# HealthLoop domain
+
+Pure local/shared implementation support for P07–P12, P18–P21 and P36. This library does not award points or authenticate a user. PostgreSQL remains authoritative and must mirror these rules while enforcing transactions and permissions.
+
+- `DEFAULT_RULES` version `steps-v1`: highest daily tier only; 3,000/5,000/7,000 → 10/20/30, a 30-point cap, 20 weekly points for three distinct days at the pinned selected goal, default 3,000. Publication must not replace existing instance rule versions. Business keys omit rule versions to prevent resetting daily/weekly entitlement.
+- Hong Kong calendar days and Monday weeks; supported calendar years 2000–2100 use UTC+08:00. The configurable late-sync hour defaults to noon the next day. Equality closes the period. Functions accept a **server** clock; client observations cannot reopen a period.
+- Use canonical accepted daily revisions as weekly inputs. Duplicate identical days are deduplicated; conflicting same-day totals are rejected. Source changes and downward revisions require review. Corrections to earned daily or weekly entitlements produce append-only compensating-entry instructions with original entry, reason, actor and separate reviewer. An overdrawn balance has zero spendable points; it does not erase redemption history.
+- `activitySyncSchema` is strict and accepts only a date, bounded integer eligible steps, supported category/policy, random opaque daily source token, revision, observation time and timezone. These are untrusted inputs, not proof of exercise. Session identity and reward amounts are never accepted from a client. Server handlers must additionally validate timing, active-account state, consent, frequency, accepted source pin and anomalies.
+- `@healthloop/domain/synthetic` is an explicit separate test/demo schema. It accepts only synthetic category/policy and must only be reachable in guarded local/demo execution. The default package entry does not export it.
+
+`src/domain.test.ts` covers threshold edges, top-ups/caps, time conversion/week rollover/cutoff equality, pinned versions/goals, stale/conflicting revisions, dependent weekly reconciliation, and strict payload rejection. A pure unit test does not prove database concurrency, RLS, anti-spoofing or real device integration.

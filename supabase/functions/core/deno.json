@@ -1,0 +1,11 @@
+{
+  "imports": {
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.116.0",
+    "zod": "npm:zod@4.6.5",
+    "@healthloop/domain": "../../../packages/domain/src/schema.ts",
+    "@healthloop/domain/synthetic": "../../../packages/domain/src/synthetic.ts",
+    "../../../packages/domain/src/time.js": "../../../packages/domain/src/time.ts",
+    "../../../packages/domain/src/schema.js": "../../../packages/domain/src/schema.ts"
+  },
+  "compilerOptions": { "strict": true }
+}

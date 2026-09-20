@@ -1,0 +1,7 @@
+{
+  "at": "2026-09-20T07:01:41.601366+00:00",
+  "coreSimulatorPresent": false,
+  "docker": {
+    "timeoutSeconds": 20
+  }
+}

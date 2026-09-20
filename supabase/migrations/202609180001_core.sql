@@ -1,0 +1,607 @@
+-- Core boundary. No raw samples, sensor identifiers, email or wallet data belong here.
+create schema if not exists private;
+create function private.server_now() returns timestamptz language sql volatile set search_path='' as $$ select clock_timestamp(); $$;
+revoke all on schema private from public, anon, authenticated;
+alter default privileges in schema public revoke all on tables from anon, authenticated;
+alter default privileges in schema public revoke execute on functions from public;
+
+create table public.profiles (
+  id uuid primary key references auth.users(id),
+  account_key uuid unique default gen_random_uuid(),
+  status text not null default 'active' check (status in ('active','deletion_requested','deleted')),
+  adult_confirmed boolean not null default false,
+  local_read boolean not null default false,
+  cloud_sync boolean not null default false,
+  marketing boolean not null default false,
+  consent_version text,
+  created_at timestamptz not null default private.server_now()
+);
+create table public.consent_events (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references public.profiles(id),
+  version text not null,
+  adult_confirmed boolean not null,
+  local_read boolean not null,
+  cloud_sync boolean not null,
+  marketing boolean not null,
+  created_at timestamptz not null default private.server_now()
+);
+create table public.mission_versions (
+  version text primary key,
+  effective_from date not null unique,
+  timezone text not null default 'Asia/Hong_Kong' check (timezone = 'Asia/Hong_Kong'),
+  late_cutoff time not null default '12:00',
+  weekly_goal integer not null default 3000 check (weekly_goal in (3000,5000,7000)),
+  weekly_days integer not null default 3 check (weekly_days = 3),
+  weekly_points integer not null default 20 check (weekly_points = 20),
+  tiers jsonb not null default '[{"steps":3000,"points":10},{"steps":5000,"points":20},{"steps":7000,"points":30}]'::jsonb,
+  check (tiers = '[{"steps":3000,"points":10},{"steps":5000,"points":20},{"steps":7000,"points":30}]'::jsonb)
+);
+insert into public.mission_versions(version,effective_from) values ('steps-v1','2026-01-01');
+create table public.mission_instances (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id),
+  kind text not null check (kind in ('daily_steps','weekly_consistency')),
+  period_start date not null,
+  rule_version text not null references public.mission_versions(version),
+  selected_goal integer not null check (selected_goal in (3000,5000,7000)),
+  source_category text,
+  source_policy text,
+  source_pin_token uuid,
+  awarded_points integer not null default 0 check (awarded_points >= 0),
+  created_at timestamptz not null default private.server_now(),
+  unique(user_id,kind,period_start),
+  check ((kind='daily_steps' and awarded_points<=30) or (kind='weekly_consistency' and awarded_points<=20))
+);
+create table public.daily_activity_summaries (
+  user_id uuid not null references public.profiles(id),
+  task_date date not null,
+  eligible_steps integer not null check (eligible_steps between 0 and 100000),
+  source_category text not null check (source_category in ('apple_phone','apple_watch','synthetic_demo')),
+  source_policy text not null check (source_policy in ('single-approved-source-v1','synthetic-demo-v1')),
+  source_pin_token uuid not null,
+  revision integer not null check (revision>0),
+  observed_at timestamptz not null,
+  timezone text not null check(timezone='Asia/Hong_Kong'),
+  received_at timestamptz not null default private.server_now(),
+  primary key(user_id,task_date)
+);
+create table public.activity_submissions (
+  user_id uuid not null references public.profiles(id),
+  task_date date not null,
+  revision integer not null check(revision>0),
+  payload jsonb not null,
+  outcome jsonb not null,
+  created_at timestamptz not null default private.server_now(),
+  primary key(user_id,task_date,revision)
+);
+create table public.risk_flags (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id),
+  task_date date not null,
+  revision integer not null,
+  reason text not null check(reason in ('excessive_steps','excessive_increment','downward_revision')),
+  status text not null default 'pending' check(status in ('pending','resolved')),
+  created_at timestamptz not null default private.server_now(),
+  unique(user_id,task_date,revision)
+);
+-- account_key is an opaque accounting identity. Deletion severs the profile link;
+-- posted entries themselves remain immutable. Retention remains subject to review.
+create table public.point_ledger (
+  id bigint generated always as identity primary key,
+  account_key uuid not null,
+  kind text not null check(kind in ('daily_award','weekly_award','redemption','refund')),
+  points integer not null check(points<>0),
+  instance_id uuid,
+  redemption_id uuid,
+  entitlement_total integer,
+  created_at timestamptz not null default private.server_now(),
+  unique(account_key,instance_id,entitlement_total),
+  unique(redemption_id,kind),
+  check ((kind in ('daily_award','weekly_award','refund') and points>0) or (kind='redemption' and points<0)),
+  check ((kind in ('daily_award','weekly_award') and instance_id is not null and entitlement_total is not null) or
+         (kind in ('redemption','refund') and redemption_id is not null and instance_id is null))
+);
+create index ledger_account_cursor on public.point_ledger(account_key,id desc);
+create table public.claim_requests (
+  user_id uuid not null references public.profiles(id),
+  idempotency_key uuid not null,
+  instance_id uuid not null references public.mission_instances(id),
+  outcome jsonb not null,
+  created_at timestamptz not null default private.server_now(),
+  primary key(user_id,idempotency_key)
+);
+create table public.reward_catalog (
+  id uuid primary key default gen_random_uuid(),
+  title_key text not null,
+  points_cost integer not null check(points_cost>0),
+  stock integer not null check(stock>=0),
+  is_demo boolean not null default true check(is_demo),
+  active boolean not null default true
+);
+create table public.redemptions (
+  sequence_id bigint generated always as identity unique,
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id),
+  reward_id uuid not null references public.reward_catalog(id),
+  idempotency_key uuid not null,
+  points_cost integer not null check(points_cost>0),
+  status text not null default 'demonstration' check(status in ('demonstration','cancelled')),
+  demo_code uuid not null unique default gen_random_uuid(),
+  created_at timestamptz not null default private.server_now(),
+  unique(user_id,idempotency_key)
+);
+create table public.appeals (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id),
+  task_date date not null,
+  reason text not null check(length(reason) between 1 and 1000),
+  status text not null default 'open' check(status in ('open','resolved')),
+  created_at timestamptz not null default private.server_now()
+);
+create table public.deletion_jobs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique references public.profiles(id),
+  status text not null default 'pending' check(status in ('pending','complete')),
+  requested_at timestamptz not null default private.server_now(),
+  completed_at timestamptz
+);
+create table private.system_settings (
+  singleton boolean primary key default true check(singleton),
+  rewards_paused boolean not null default false,
+  demo_mode boolean not null default false,
+  project_label text not null default 'healthloop-real-unconfigured',
+  summary_retention_days integer not null default 90 check(summary_retention_days between 1 and 365)
+);
+insert into private.system_settings(singleton) values(true);
+create table private.rate_windows (
+  user_id uuid not null references public.profiles(id),
+  operation text not null,
+  window_start timestamptz not null,
+  hits integer not null default 1,
+  primary key(user_id,operation)
+);
+create table private.admin_roles (
+  user_id uuid primary key references auth.users(id),
+  role text not null check(role in ('operator','reviewer'))
+);
+create table private.admin_audit (
+  id bigint generated always as identity primary key,
+  actor_id uuid not null,
+  action text not null,
+  reason text not null,
+  created_at timestamptz not null default private.server_now()
+);
+
+create function private.immutable_record() returns trigger language plpgsql set search_path='' as $$
+begin raise exception using errcode='P0001',message='IMMUTABLE_RECORD'; end $$;
+create trigger ledger_immutable before update or delete on public.point_ledger for each row execute function private.immutable_record();
+create trigger rules_immutable before update or delete on public.mission_versions for each row execute function private.immutable_record();
+create trigger audit_immutable before update or delete on private.admin_audit for each row execute function private.immutable_record();
+
+create function private.require_user() returns uuid language plpgsql stable security definer set search_path='' as $$
+declare v_id uuid := auth.uid();
+begin
+  if v_id is null or coalesce((auth.jwt()->>'is_anonymous')::boolean,false) then
+    raise exception using errcode='P0001',message='UNAUTHENTICATED';
+  end if;
+  return v_id;
+end $$;
+create function private.account_active() returns boolean language sql stable security definer set search_path='' as $$
+  select exists(select 1 from public.profiles where id=auth.uid() and status='active');
+$$;
+-- Lock order everywhere: profile -> system settings -> mission/catalog rows.
+create function private.lock_account(p_need_consent boolean default false) returns public.profiles language plpgsql security definer set search_path='' as $$
+declare p public.profiles;
+begin
+  select * into p from public.profiles where id=private.require_user() for update;
+  if not found then raise exception using errcode='P0001',message='ONBOARDING_REQUIRED'; end if;
+  if p.status<>'active' then raise exception using errcode='P0001',message='ACCOUNT_INACTIVE'; end if;
+  if p_need_consent and (not p.adult_confirmed or not p.cloud_sync) then
+    raise exception using errcode='P0001',message='CONSENT_REQUIRED';
+  end if;
+  return p;
+end $$;
+create function private.rate_limit(p_user uuid,p_operation text,p_limit integer) returns void language plpgsql security definer set search_path='' as $$
+declare r private.rate_windows; t timestamptz:=private.server_now();
+begin
+  insert into private.rate_windows(user_id,operation,window_start) values(p_user,p_operation,t)
+  on conflict(user_id,operation) do update set
+    window_start=case when private.rate_windows.window_start<=t-interval '1 minute' then t else private.rate_windows.window_start end,
+    hits=case when private.rate_windows.window_start<=t-interval '1 minute' then 1 else private.rate_windows.hits+1 end
+  returning * into r;
+  if r.hits>p_limit then raise exception using errcode='P0001',message='RATE_LIMITED'; end if;
+end $$;
+create function private.week_start(p_day date) returns date language sql immutable set search_path='' as $$
+  select p_day - (extract(isodow from p_day)::integer-1);
+$$;
+create function private.entitlement(p_steps integer) returns integer language sql immutable set search_path='' as $$
+  select case when p_steps>=7000 then 30 when p_steps>=5000 then 20 when p_steps>=3000 then 10 else 0 end;
+$$;
+create function private.cutoff(p_day date,p_cutoff time) returns timestamptz language sql immutable set search_path='' as $$
+  select ((p_day+1)+p_cutoff) at time zone 'Asia/Hong_Kong';
+$$;
+create function private.ensure_mission(p_user uuid,p_kind text,p_day date) returns public.mission_instances language plpgsql security definer set search_path='' as $$
+declare m public.mission_instances; v public.mission_versions;
+begin
+  select * into m from public.mission_instances where user_id=p_user and kind=p_kind and period_start=p_day;
+  if found then return m; end if;
+  select * into v from public.mission_versions where effective_from<=p_day order by effective_from desc limit 1;
+  if not found then raise exception using errcode='P0001',message='RULES_UNAVAILABLE'; end if;
+  insert into public.mission_instances(user_id,kind,period_start,rule_version,selected_goal)
+  values(p_user,p_kind,p_day,v.version,v.weekly_goal) returning * into m;
+  return m;
+end $$;
+create function private.balance(p_account uuid) returns bigint language sql stable security definer set search_path='' as $$
+  select coalesce(sum(points),0) from public.point_ledger where account_key=p_account;
+$$;
+create function private.profile_json(p public.profiles) returns jsonb language sql immutable set search_path='' as $$
+  select jsonb_build_object('id',p.id,'status',p.status,'adultConfirmed',p.adult_confirmed,'localRead',p.local_read,
+    'cloudSync',p.cloud_sync,'marketing',p.marketing,'consentVersion',p.consent_version);
+$$;
+
+create function public.hl_set_consents(p_adult_confirmed boolean,p_local_read boolean,p_cloud_sync boolean,p_marketing boolean,p_version text)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare v_id uuid:=private.require_user(); p public.profiles;
+begin
+  if p_adult_confirmed is distinct from true or p_local_read is null or p_cloud_sync is null or p_marketing is null or p_version is distinct from '2026-09-18' then
+    raise exception using errcode='P0001',message='INVALID_INPUT';
+  end if;
+  insert into public.profiles(id) values(v_id) on conflict(id) do nothing;
+  p:=private.lock_account(false);
+  perform private.rate_limit(p.id,'consent',20);
+  update public.profiles set adult_confirmed=true,local_read=p_local_read,cloud_sync=p_cloud_sync,marketing=p_marketing,consent_version=p_version
+    where id=p.id returning * into p;
+  insert into public.consent_events(user_id,version,adult_confirmed,local_read,cloud_sync,marketing)
+    values(p.id,p_version,true,p_local_read,p_cloud_sync,p_marketing);
+  return jsonb_build_object('profile',private.profile_json(p));
+end $$;
+create function public.hl_consents() returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.profiles;
+begin
+  perform private.require_user();
+  if not exists(select 1 from public.profiles where id=auth.uid()) then return jsonb_build_object('profile',null); end if;
+  p:=private.lock_account(false); return jsonb_build_object('profile',private.profile_json(p));
+end $$;
+
+create function public.hl_sync_activity(p_task_date date,p_eligible_steps integer,p_source_category text,p_source_policy text,p_source_pin_token uuid,p_revision integer,p_observed_at timestamptz,p_timezone text)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.profiles; m public.mission_instances; s public.daily_activity_summaries; v public.mission_versions;
+  cfg private.system_settings; t timestamptz; today date; reason text; submission public.activity_submissions; payload jsonb; outcome jsonb;
+begin
+  p:=private.lock_account(true); t:=private.server_now(); today:=(t at time zone 'Asia/Hong_Kong')::date;
+  if p_task_date is null or p_task_date not between today-1 and today or p_eligible_steps is null or p_eligible_steps not between 0 and 100000
+    or p_revision is null or p_revision<1 or p_timezone is distinct from 'Asia/Hong_Kong' or p_source_pin_token is null
+    or p_observed_at is null or p_observed_at>t+interval '5 minutes' or p_observed_at<(p_task_date::timestamp at time zone 'Asia/Hong_Kong')
+    then
+    raise exception using errcode='P0001',message='INVALID_INPUT';
+  end if;
+  select * into cfg from private.system_settings where singleton;
+  if p_source_category in ('apple_phone','apple_watch') then
+    if p_source_policy is distinct from 'single-approved-source-v1' or cfg.demo_mode then raise exception using errcode='P0001',message='SOURCE_REJECTED'; end if;
+  elsif p_source_category='synthetic_demo' then
+    if p_source_policy is distinct from 'synthetic-demo-v1' or not cfg.demo_mode or cfg.project_label not like 'healthloop-local-%' then
+      raise exception using errcode='P0001',message='SOURCE_REJECTED'; end if;
+  else raise exception using errcode='P0001',message='SOURCE_REJECTED'; end if;
+  m:=private.ensure_mission(p.id,'daily_steps',p_task_date);
+  perform private.ensure_mission(p.id,'weekly_consistency',private.week_start(p_task_date));
+  select * into v from public.mission_versions where version=m.rule_version;
+  payload:=jsonb_build_object('eligibleSteps',p_eligible_steps,'sourceCategory',p_source_category,'sourcePolicy',p_source_policy,
+    'sourcePinToken',p_source_pin_token,'observedAt',p_observed_at,'timezone',p_timezone);
+  select * into submission from public.activity_submissions where user_id=p.id and task_date=p_task_date and revision=p_revision;
+  if found then
+    if submission.payload<>payload then raise exception using errcode='P0001',message='REVISION_CONFLICT'; end if;
+    return submission.outcome;
+  end if;
+  if exists(select 1 from public.activity_submissions where user_id=p.id and task_date=p_task_date and revision>p_revision) then
+    raise exception using errcode='P0001',message='REVISION_CONFLICT';
+  end if;
+  select * into s from public.daily_activity_summaries where user_id=p.id and task_date=p_task_date;
+  if found and s.revision=p_revision and s.eligible_steps=p_eligible_steps and s.source_category=p_source_category
+    and s.source_policy=p_source_policy and s.source_pin_token=p_source_pin_token and s.observed_at=p_observed_at then
+    return jsonb_build_object('instanceId',m.id,'taskDate',p_task_date,'eligibleSteps',s.eligible_steps,'status','accepted','revision',s.revision,'sourceCategory',s.source_category,'ruleVersion',m.rule_version);
+  end if;
+  if t>=private.cutoff(p_task_date,v.late_cutoff) then raise exception using errcode='P0001',message='CUTOFF_PASSED'; end if;
+  if s.user_id is not null and p_revision<=s.revision then raise exception using errcode='P0001',message='REVISION_CONFLICT'; end if;
+  if m.source_category is not null and (m.source_category<>p_source_category or m.source_policy<>p_source_policy or m.source_pin_token<>p_source_pin_token) then
+    raise exception using errcode='P0001',message='SOURCE_PINNED';
+  end if;
+  perform private.rate_limit(p.id,'sync',30);
+  if p_eligible_steps>30000 then reason:='excessive_steps';
+  elsif s.user_id is not null and p_eligible_steps<s.eligible_steps then reason:='downward_revision';
+  elsif s.user_id is not null and p_eligible_steps-s.eligible_steps>15000 and t-s.received_at<interval '1 minute' then reason:='excessive_increment'; end if;
+  if reason is not null then
+    insert into public.risk_flags(user_id,task_date,revision,reason) values(p.id,p_task_date,p_revision,reason) on conflict do nothing;
+    outcome:=jsonb_build_object('instanceId',m.id,'taskDate',p_task_date,'eligibleSteps',s.eligible_steps,'status','pending_review','revision',p_revision,'sourceCategory',p_source_category,'ruleVersion',m.rule_version);
+    insert into public.activity_submissions(user_id,task_date,revision,payload,outcome) values(p.id,p_task_date,p_revision,payload,outcome);
+    return outcome;
+  end if;
+  update public.mission_instances set source_category=p_source_category,source_policy=p_source_policy,source_pin_token=p_source_pin_token where id=m.id;
+  insert into public.daily_activity_summaries(user_id,task_date,eligible_steps,source_category,source_policy,source_pin_token,revision,observed_at,timezone,received_at)
+    values(p.id,p_task_date,p_eligible_steps,p_source_category,p_source_policy,p_source_pin_token,p_revision,p_observed_at,p_timezone,t)
+    on conflict(user_id,task_date) do update set eligible_steps=excluded.eligible_steps,revision=excluded.revision,observed_at=excluded.observed_at,received_at=excluded.received_at;
+  outcome:=jsonb_build_object('instanceId',m.id,'taskDate',p_task_date,'eligibleSteps',p_eligible_steps,'status','accepted','revision',p_revision,'sourceCategory',p_source_category,'ruleVersion',m.rule_version);
+  insert into public.activity_submissions(user_id,task_date,revision,payload,outcome) values(p.id,p_task_date,p_revision,payload,outcome);
+  return outcome;
+end $$;
+
+create function public.hl_claim(p_instance_id uuid,p_idempotency_key uuid) returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.profiles; m public.mission_instances; w public.mission_instances; v public.mission_versions; s public.daily_activity_summaries;
+  r public.claim_requests; t timestamptz; total integer; delta integer:=0; bonus integer:=0; days integer; outcome jsonb;
+begin
+  p:=private.lock_account(true);
+  if p_instance_id is null or p_idempotency_key is null then raise exception using errcode='P0001',message='INVALID_INPUT'; end if;
+  select * into r from public.claim_requests where user_id=p.id and idempotency_key=p_idempotency_key;
+  if found then
+    if r.instance_id<>p_instance_id then raise exception using errcode='P0001',message='IDEMPOTENCY_CONFLICT'; end if;
+    return r.outcome;
+  end if;
+  perform 1 from private.system_settings where singleton and not rewards_paused for share;
+  if not found then raise exception using errcode='P0001',message='REWARDS_PAUSED'; end if;
+  t:=private.server_now();
+  select * into m from public.mission_instances where id=p_instance_id and user_id=p.id;
+  if not found then raise exception using errcode='P0001',message='NOT_FOUND'; end if;
+  select * into v from public.mission_versions where version=m.rule_version;
+  if t>=private.cutoff(case when m.kind='daily_steps' then m.period_start else m.period_start+6 end,v.late_cutoff) then raise exception using errcode='P0001',message='CUTOFF_PASSED'; end if;
+  if m.kind='daily_steps' then
+  select * into s from public.daily_activity_summaries where user_id=p.id and task_date=m.period_start;
+  if not found then raise exception using errcode='P0001',message='SUMMARY_REQUIRED'; end if;
+  -- Rate check only new requests; a replay cannot consume another reward.
+  perform private.rate_limit(p.id,'claim',120);
+  total:=private.entitlement(s.eligible_steps); delta:=greatest(0,total-m.awarded_points);
+  if delta>0 then
+    insert into public.point_ledger(account_key,kind,points,instance_id,entitlement_total) values(p.account_key,'daily_award',delta,m.id,total);
+    update public.mission_instances set awarded_points=total where id=m.id;
+  end if;
+  w:=private.ensure_mission(p.id,'weekly_consistency',private.week_start(m.period_start));
+  else w:=m; total:=0; perform private.rate_limit(p.id,'claim',120); end if;
+  select count(*) into days from public.daily_activity_summaries d join public.mission_instances i
+    on i.user_id=d.user_id and i.period_start=d.task_date and i.kind='daily_steps'
+    where d.user_id=p.id and d.task_date between w.period_start and w.period_start+6 and d.eligible_steps>=w.selected_goal;
+  if days>=3 and w.awarded_points=0 then
+    bonus:=20;
+    insert into public.point_ledger(account_key,kind,points,instance_id,entitlement_total) values(p.account_key,'weekly_award',20,w.id,20);
+    update public.mission_instances set awarded_points=20 where id=w.id;
+  end if;
+  outcome:=jsonb_build_object('instanceId',m.id,'addedPoints',delta+bonus,'dailyAwardedPoints',case when m.kind='daily_steps' then greatest(total,m.awarded_points) else 0 end,
+    'weeklyAwardedPoints',w.awarded_points+bonus,'balance',private.balance(p.account_key));
+  insert into public.claim_requests(user_id,idempotency_key,instance_id,outcome) values(p.id,p_idempotency_key,m.id,outcome);
+  return outcome;
+end $$;
+
+create function public.hl_missions() returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.profiles; today date:=(private.server_now() at time zone 'Asia/Hong_Kong')::date; result jsonb;
+begin
+  p:=private.lock_account(false);
+  perform private.ensure_mission(p.id,'daily_steps',today);
+  perform private.ensure_mission(p.id,'weekly_consistency',private.week_start(today));
+  select coalesce(jsonb_agg(jsonb_build_object('id',m.id,'kind',m.kind,'periodStart',m.period_start,'ruleVersion',m.rule_version,
+    'selectedGoal',m.selected_goal,'awardedPoints',m.awarded_points,'eligibleSteps',s.eligible_steps,
+    'cutoffAt',private.cutoff(case when m.kind='daily_steps' then m.period_start else m.period_start+6 end,v.late_cutoff),
+    'tiers',v.tiers,'weeklyDaysRequired',v.weekly_days,'weeklyBonusPoints',v.weekly_points) order by m.period_start desc,m.kind),'[]'::jsonb)
+    into result from public.mission_instances m join public.mission_versions v on v.version=m.rule_version
+    left join public.daily_activity_summaries s on s.user_id=p.id and s.task_date=m.period_start and m.kind='daily_steps'
+    where m.user_id=p.id and m.period_start>=today-7;
+  return jsonb_build_object('items',result);
+end $$;
+create function public.hl_health_summary() returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.profiles; result jsonb;
+begin
+  p:=private.lock_account(false);
+  select coalesce(jsonb_agg(jsonb_build_object('taskDate',task_date,'eligibleSteps',eligible_steps,'sourceCategory',source_category,
+    'revision',revision,'observedAt',observed_at,'receivedAt',received_at,'timezone',timezone) order by task_date desc),'[]'::jsonb)
+  into result from public.daily_activity_summaries where user_id=p.id and task_date>=(private.server_now() at time zone 'Asia/Hong_Kong')::date-6;
+  return jsonb_build_object('items',result);
+end $$;
+create function public.hl_points_summary() returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.profiles; result jsonb;
+begin
+  p:=private.lock_account(false);
+  select jsonb_build_object('availablePoints',greatest(coalesce(sum(points),0),0),'earnedPoints',coalesce(sum(points) filter(where kind in ('daily_award','weekly_award')),0),
+    'spentPoints',-coalesce(sum(points) filter(where kind='redemption'),0),'reversedPoints',coalesce(sum(points) filter(where kind='refund'),0),
+    'pendingEvaluations',(select count(*) from public.risk_flags where user_id=p.id and status='pending')) into result
+  from public.point_ledger where account_key=p.account_key;
+  return result;
+end $$;
+create function public.hl_ledger(p_limit integer default 20,p_cursor bigint default null) returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.profiles; result jsonb; n integer; last_id bigint;
+begin
+  p:=private.lock_account(false);
+  if p_limit is null or p_limit not between 1 and 100 or (p_cursor is not null and p_cursor<=0) then raise exception using errcode='P0001',message='INVALID_INPUT'; end if;
+  select coalesce(jsonb_agg(jsonb_build_object('id',id::text,'kind',kind,'points',points,'createdAt',created_at,'instanceId',instance_id) order by id desc),'[]'::jsonb),count(*),min(id)
+    into result,n,last_id from (select * from public.point_ledger where account_key=p.account_key and (p_cursor is null or id<p_cursor) order by id desc limit p_limit) page;
+  return jsonb_build_object('items',result,'nextCursor',case when n=p_limit then last_id::text else null end);
+end $$;
+
+create function public.hl_rewards() returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.profiles; result jsonb;
+begin
+  p:=private.lock_account(false);
+  select coalesce(jsonb_agg(jsonb_build_object('id',id,'titleKey',title_key,'pointsCost',points_cost,'stock',stock,'isDemo',is_demo) order by id),'[]'::jsonb)
+  into result from public.reward_catalog where active;
+  return jsonb_build_object('items',result);
+end $$;
+create function public.hl_redeem(p_reward_id uuid,p_idempotency_key uuid) returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.profiles; r public.reward_catalog; d public.redemptions;
+begin
+  p:=private.lock_account(true);
+  if p_reward_id is null or p_idempotency_key is null then raise exception using errcode='P0001',message='INVALID_INPUT'; end if;
+  select * into d from public.redemptions where user_id=p.id and idempotency_key=p_idempotency_key;
+  if found then
+    if d.reward_id<>p_reward_id then raise exception using errcode='P0001',message='IDEMPOTENCY_CONFLICT'; end if;
+    return jsonb_build_object('id',d.id,'status',d.status,'demoCode',d.demo_code,'pointsCost',d.points_cost);
+  end if;
+  perform 1 from private.system_settings where singleton and not rewards_paused for share;
+  if not found then raise exception using errcode='P0001',message='REWARDS_PAUSED'; end if;
+  perform private.rate_limit(p.id,'redeem',20);
+  select * into r from public.reward_catalog where id=p_reward_id and active for update;
+  if not found then raise exception using errcode='P0001',message='NOT_FOUND'; end if;
+  if r.stock<=0 then raise exception using errcode='P0001',message='OUT_OF_STOCK'; end if;
+  if private.balance(p.account_key)<r.points_cost then raise exception using errcode='P0001',message='INSUFFICIENT_POINTS'; end if;
+  insert into public.redemptions(user_id,reward_id,idempotency_key,points_cost) values(p.id,r.id,p_idempotency_key,r.points_cost) returning * into d;
+  update public.reward_catalog set stock=stock-1 where id=r.id;
+  insert into public.point_ledger(account_key,kind,points,redemption_id) values(p.account_key,'redemption',-r.points_cost,d.id);
+  return jsonb_build_object('id',d.id,'status',d.status,'demoCode',d.demo_code,'pointsCost',d.points_cost);
+end $$;
+create function public.hl_cancel_redemption(p_redemption_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.profiles; d public.redemptions;
+begin
+  p:=private.lock_account(false);
+  select * into d from public.redemptions where id=p_redemption_id and user_id=p.id for update;
+  if not found then raise exception using errcode='P0001',message='NOT_FOUND'; end if;
+  if d.status<>'cancelled' then
+    update public.reward_catalog set stock=stock+1 where id=d.reward_id;
+    update public.redemptions set status='cancelled' where id=d.id;
+    insert into public.point_ledger(account_key,kind,points,redemption_id) values(p.account_key,'refund',d.points_cost,d.id);
+  end if;
+  return jsonb_build_object('id',d.id,'status','cancelled');
+end $$;
+create function public.hl_redemptions(p_limit integer default 20,p_cursor bigint default null) returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.profiles; result jsonb; last_id bigint; n integer;
+begin
+  p:=private.lock_account(false);
+  if p_limit is null or p_limit not between 1 and 100 or (p_cursor is not null and p_cursor<=0) then raise exception using errcode='P0001',message='INVALID_INPUT'; end if;
+  select coalesce(jsonb_agg(jsonb_build_object('id',id,'rewardId',reward_id,'status',status,'demoCode',demo_code,'pointsCost',points_cost,'createdAt',created_at) order by sequence_id desc),'[]'::jsonb),min(sequence_id),count(*)
+  into result,last_id,n from (select * from public.redemptions where user_id=p.id and (p_cursor is null or sequence_id<p_cursor) order by sequence_id desc limit p_limit) page;
+  return jsonb_build_object('items',result,'nextCursor',case when n=p_limit then last_id::text else null end);
+end $$;
+create function public.hl_create_appeal(p_task_date date,p_reason text) returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.profiles; v_id uuid;
+begin
+  p:=private.lock_account(false);
+  if p_task_date is null or p_task_date not between (private.server_now() at time zone 'Asia/Hong_Kong')::date-90 and (private.server_now() at time zone 'Asia/Hong_Kong')::date
+    or p_reason is null or length(trim(p_reason)) not between 1 and 1000 then raise exception using errcode='P0001',message='INVALID_INPUT'; end if;
+  perform private.rate_limit(p.id,'appeal',5);
+  insert into public.appeals(user_id,task_date,reason) values(p.id,p_task_date,trim(p_reason)) returning id into v_id;
+  return jsonb_build_object('id',v_id,'status','open');
+end $$;
+create function public.hl_export() returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.profiles;
+begin
+  p:=private.lock_account(false); perform private.rate_limit(p.id,'export',2);
+  return jsonb_build_object('exportedAt',private.server_now(),'profile',private.profile_json(p),
+    'consentEvents',(select coalesce(jsonb_agg(to_jsonb(c)-'user_id'),'[]'::jsonb) from public.consent_events c where user_id=p.id),
+    'activityRevisions',(select coalesce(jsonb_agg(to_jsonb(a)-'user_id'),'[]'::jsonb) from public.activity_submissions a where user_id=p.id),
+    'activitySummaries',(select coalesce(jsonb_agg(to_jsonb(d)-'user_id'-'source_pin_token'),'[]'::jsonb) from public.daily_activity_summaries d where user_id=p.id),
+    'missions',(select coalesce(jsonb_agg(to_jsonb(m)-'user_id'-'source_pin_token'),'[]'::jsonb) from public.mission_instances m where user_id=p.id),
+    'ledger',(select coalesce(jsonb_agg(to_jsonb(l)-'account_key'),'[]'::jsonb) from public.point_ledger l where account_key=p.account_key),
+    'appeals',(select coalesce(jsonb_agg(to_jsonb(a)-'user_id'),'[]'::jsonb) from public.appeals a where user_id=p.id),
+    'redemptions',(select coalesce(jsonb_agg(to_jsonb(r)-'user_id'),'[]'::jsonb) from public.redemptions r where user_id=p.id));
+end $$;
+create function public.hl_request_deletion() returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.profiles; j public.deletion_jobs; recent boolean;
+begin
+  -- Signed AMR, not JWT issuance time: a token refresh is not reauthentication.
+  select exists(select 1 from jsonb_array_elements(coalesce(auth.jwt()->'amr','[]'::jsonb)) a
+    where a->>'method'='otp' and (a->>'timestamp')::numeric between extract(epoch from private.server_now())-300 and extract(epoch from private.server_now())+30) into recent;
+  if not recent then raise exception using errcode='P0001',message='REAUTHENTICATION_REQUIRED'; end if;
+  select * into p from public.profiles where id=private.require_user() for update;
+  if not found then raise exception using errcode='P0001',message='ONBOARDING_REQUIRED'; end if;
+  if p.status='deleted' then raise exception using errcode='P0001',message='ACCOUNT_INACTIVE'; end if;
+  insert into public.deletion_jobs(user_id) values(p.id) on conflict(user_id) do nothing;
+  update public.profiles set status='deletion_requested',cloud_sync=false,local_read=false,marketing=false where id=p.id;
+  select * into j from public.deletion_jobs where user_id=p.id;
+  return jsonb_build_object('jobId',j.id,'status','deletion_requested');
+end $$;
+-- Service worker can retrieve jobs, purge core data and then delete the Auth user.
+-- Tombstones deliberately have no auth FK after this migration, preventing an old JWT
+-- from recreating a profile even after the Auth user is deleted.
+alter table public.profiles drop constraint profiles_id_fkey;
+create function public.hl_deletion_jobs() returns jsonb language plpgsql security definer set search_path='' as $$
+begin
+  if auth.role() is distinct from 'service_role' then raise exception using errcode='P0001',message='FORBIDDEN'; end if;
+  return (select coalesce(jsonb_agg(to_jsonb(j)),'[]'::jsonb) from (select * from public.deletion_jobs where status='pending' order by requested_at limit 50) j);
+end $$;
+create function public.hl_purge_deletion(p_job_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$
+declare j public.deletion_jobs; p public.profiles;
+begin
+  if auth.role() is distinct from 'service_role' then raise exception using errcode='P0001',message='FORBIDDEN'; end if;
+  select * into j from public.deletion_jobs where id=p_job_id;
+  if not found then raise exception using errcode='P0001',message='NOT_FOUND'; end if;
+  select * into p from public.profiles where id=j.user_id for update;
+  if p.status='active' then raise exception using errcode='P0001',message='DELETION_NOT_REQUESTED'; end if;
+  delete from public.claim_requests where user_id=p.id;
+  delete from public.activity_submissions where user_id=p.id;
+  delete from public.daily_activity_summaries where user_id=p.id;
+  delete from public.risk_flags where user_id=p.id;
+  delete from public.mission_instances where user_id=p.id;
+  delete from public.consent_events where user_id=p.id;
+  delete from public.redemptions where user_id=p.id;
+  delete from public.appeals where user_id=p.id;
+  delete from private.rate_windows where user_id=p.id;
+  delete from private.admin_roles where user_id=p.id;
+  update public.profiles set account_key=null,status='deleted',adult_confirmed=false,cloud_sync=false,local_read=false,marketing=false,consent_version=null where id=p.id;
+  return jsonb_build_object('jobId',j.id,'status','purged');
+end $$;
+create function public.hl_complete_deletion(p_job_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$
+declare j public.deletion_jobs;
+begin
+  if auth.role() is distinct from 'service_role' then raise exception using errcode='P0001',message='FORBIDDEN'; end if;
+  select * into j from public.deletion_jobs where id=p_job_id for update;
+  if not found then raise exception using errcode='P0001',message='NOT_FOUND'; end if;
+  if not exists(select 1 from public.profiles where id=j.user_id and status='deleted' and account_key is null) then
+    raise exception using errcode='P0001',message='DELETION_NOT_PURGED';
+  end if;
+  update public.deletion_jobs set status='complete',completed_at=coalesce(completed_at,private.server_now()) where id=j.id;
+  return jsonb_build_object('jobId',j.id,'status','complete');
+end $$;
+create function public.hl_admin_pause(p_paused boolean,p_reason text) returns jsonb language plpgsql security definer set search_path='' as $$
+declare p public.profiles;
+begin
+  p:=private.lock_account(false);
+  if not exists(select 1 from private.admin_roles where user_id=p.id and role='operator') or auth.jwt()->>'aal' is distinct from 'aal2' then
+    raise exception using errcode='P0001',message='FORBIDDEN';
+  end if;
+  if p_paused is null or p_reason is null or length(trim(p_reason)) not between 10 and 1000 then raise exception using errcode='P0001',message='INVALID_INPUT'; end if;
+  update private.system_settings set rewards_paused=p_paused where singleton;
+  insert into private.admin_audit(actor_id,action,reason) values(p.id,case when p_paused then 'pause_rewards' else 'resume_rewards' end,trim(p_reason));
+  return jsonb_build_object('rewardsPaused',p_paused);
+end $$;
+create function public.hl_prune_summaries() returns bigint language plpgsql security definer set search_path='' as $$
+declare n bigint;
+begin
+  if auth.role() is distinct from 'service_role' then raise exception using errcode='P0001',message='FORBIDDEN'; end if;
+  delete from public.daily_activity_summaries where task_date<(private.server_now() at time zone 'Asia/Hong_Kong')::date-
+    (select summary_retention_days from private.system_settings where singleton);
+  get diagnostics n=row_count;
+  delete from public.activity_submissions where task_date<(private.server_now() at time zone 'Asia/Hong_Kong')::date-
+    (select summary_retention_days from private.system_settings where singleton);
+  return n;
+end $$;
+
+-- Default-deny every table, including private data. No direct client mutations.
+do $$ declare t text; begin
+  foreach t in array array['profiles','consent_events','mission_versions','mission_instances','daily_activity_summaries','activity_submissions','risk_flags','point_ledger','claim_requests','reward_catalog','redemptions','appeals','deletion_jobs'] loop
+    execute format('alter table public.%I enable row level security',t);
+    execute format('revoke all on public.%I from public,anon,authenticated',t);
+    execute format('grant select on public.%I to authenticated',t);
+  end loop;
+  foreach t in array array['system_settings','rate_windows','admin_roles','admin_audit'] loop
+    execute format('alter table private.%I enable row level security',t);
+    execute format('revoke all on private.%I from public,anon,authenticated',t);
+  end loop;
+end $$;
+create policy active_own_profile on public.profiles for select to authenticated using(id=(select auth.uid()) and (select private.account_active()));
+create policy active_own_consent on public.consent_events for select to authenticated using(user_id=(select auth.uid()) and (select private.account_active()));
+create policy active_own_mission on public.mission_instances for select to authenticated using(user_id=(select auth.uid()) and (select private.account_active()));
+create policy active_own_summary on public.daily_activity_summaries for select to authenticated using(user_id=(select auth.uid()) and (select private.account_active()));
+create policy active_own_submission on public.activity_submissions for select to authenticated using(user_id=(select auth.uid()) and (select private.account_active()));
+create policy active_own_risk on public.risk_flags for select to authenticated using(user_id=(select auth.uid()) and (select private.account_active()));
+create policy active_own_claim on public.claim_requests for select to authenticated using(user_id=(select auth.uid()) and (select private.account_active()));
+create policy active_own_redemption on public.redemptions for select to authenticated using(user_id=(select auth.uid()) and (select private.account_active()));
+create policy active_own_appeal on public.appeals for select to authenticated using(user_id=(select auth.uid()) and (select private.account_active()));
+create policy active_own_deletion on public.deletion_jobs for select to authenticated using(user_id=(select auth.uid()) and (select private.account_active()));
+create policy active_ledger on public.point_ledger for select to authenticated using(account_key=(select p.account_key from public.profiles p where p.id=(select auth.uid()) and p.status='active'));
+create policy active_rules on public.mission_versions for select to authenticated using((select private.account_active()));
+create policy active_catalog on public.reward_catalog for select to authenticated using(active and (select private.account_active()));
+-- Schema USAGE does not grant access to private tables or helper RPCs.
+grant usage on schema private to authenticated;
+revoke execute on all functions in schema private from public,anon,authenticated;
+grant execute on function private.account_active() to authenticated;
+revoke execute on all functions in schema public from public,anon,authenticated;
+grant execute on function public.hl_set_consents(boolean,boolean,boolean,boolean,text),public.hl_consents(),
+  public.hl_sync_activity(date,integer,text,text,uuid,integer,timestamptz,text),public.hl_claim(uuid,uuid),public.hl_missions(),
+  public.hl_health_summary(),public.hl_points_summary(),public.hl_ledger(integer,bigint),public.hl_rewards(),
+  public.hl_redeem(uuid,uuid),public.hl_cancel_redemption(uuid),public.hl_redemptions(integer,bigint),
+  public.hl_create_appeal(date,text),public.hl_export(),public.hl_request_deletion(),public.hl_admin_pause(boolean,text) to authenticated;
+grant execute on function public.hl_deletion_jobs(),public.hl_purge_deletion(uuid),public.hl_complete_deletion(uuid),public.hl_prune_summaries() to service_role;

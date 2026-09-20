@@ -1,0 +1,34 @@
+{
+  "name": "healthloop",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=24.19.0 <25",
+    "pnpm": "11.19.0"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "tsc --noEmit && pnpm --filter @healthloop/mobile typecheck",
+    "test": "vitest run",
+    "test:db": "node supabase/tests/run.mjs",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm boundaries",
+    "boundaries": "node scripts/check-boundaries.mjs",
+    "mobile": "pnpm --filter @healthloop/mobile start",
+    "mobile:ios": "pnpm --filter @healthloop/mobile ios",
+    "mobile:bundle": "pnpm --filter @healthloop/mobile exec expo export --platform ios --output-dir dist && node scripts/check-ios-bundle.mjs",
+    "test:integration": "vitest run --config vitest.db.config.ts",
+    "typecheck:edge": "deno check --config supabase/functions/core/deno.json supabase/functions/core/index.ts supabase/functions/deletion-worker/run.ts",
+    "test:edge": "deno test --config supabase/functions/core/deno.json supabase/functions/core/handler.test.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.13.5",
+    "eslint": "10.10.0",
+    "pg": "8.23.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.0",
+    "vitest": "4.1.11"
+  },
+  "type": "module"
+}

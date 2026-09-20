@@ -1,0 +1,247 @@
+/** Destructive ONLY inside an explicitly acknowledged disposable loopback database. */
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import pg from 'pg';
+const target = process.env.HEALTHLOOP_TEST_DATABASE_URL;
+if (!target) throw new Error('Set HEALTHLOOP_TEST_DATABASE_URL to a disposable local healthloop_test_* database.');
+const url = new URL(target);
+if (!['localhost','127.0.0.1','[::1]'].includes(url.hostname) || !/^\/healthloop_test_[a-z0-9_]+$/.test(url.pathname) || process.env.HEALTHLOOP_ALLOW_DB_RESET !== 'local-only') {
+  throw new Error('Refusing reset: requires loopback, database healthloop_test_*, HEALTHLOOP_ALLOW_DB_RESET=local-only.');
+}
+const pool = new pg.Pool({ connectionString:target, max:110 });
+const admin = await pool.connect();
+let passed = 0;
+const check = async (name, fn) => { await fn(); passed++; console.log(`PASS ${name}`); };
+const jwt = (id, extra={}) => ({sub:id,role:'authenticated',is_anonymous:false,aal:'aal1',amr:[{method:'otp',timestamp:1789376400}],...extra});
+async function session(id, fn, extra={}) {
+  const c = await pool.connect();
+  try {
+    await c.query('begin');
+    await c.query('set local role authenticated');
+    await c.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify(jwt(id,extra))]);
+    const r = await fn(c); await c.query('commit'); return r;
+  } catch (e) { await c.query('rollback'); throw e; } finally { c.release(); }
+}
+async function rpc(id,name,args=[],extra={}) {
+  assert.match(name,/^hl_[a-z_]+$/);
+  return session(id, async c => (await c.query(`select public.${name}(${args.map((_,i)=>`$${i+1}`).join(',')}) as result`,args)).rows[0].result, extra);
+}
+async function rejected(action,message) {
+  await assert.rejects(action,e=>e.message.includes(message));
+}
+async function user(cloud=true) {
+  const id=randomUUID(); await admin.query('insert into auth.users(id) values($1)',[id]);
+  await rpc(id,'hl_set_consents',[true,true,cloud,false,'2026-09-18']); return id;
+}
+async function clock(iso) {
+  assert.match(iso,/^2026-09-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/);
+  // Owner-only test fixture replacement. No configurable clock exists in production.
+  await admin.query(`create or replace function private.server_now() returns timestamptz language sql volatile set search_path='' as $$ select '${iso}'::timestamptz $$`);
+}
+const pins=new Map();
+async function sync(id,steps=3000,revision=1,day='2026-09-14',extras={}) {
+  const key=`${id}:${day}`; if(!pins.has(key)) pins.set(key,randomUUID());
+  return rpc(id,'hl_sync_activity',[day,steps,extras.category??'apple_phone',extras.policy??'single-approved-source-v1',extras.pin??pins.get(key),revision,extras.observed??`${day}T01:00:00Z`,'Asia/Hong_Kong']);
+}
+try {
+  await admin.query('drop schema if exists public cascade; drop schema if exists private cascade; drop schema if exists auth cascade; create schema public; create schema auth;');
+  await admin.query(`do $$ begin
+    if not exists(select 1 from pg_roles where rolname='anon') then create role anon nologin; end if;
+    if not exists(select 1 from pg_roles where rolname='authenticated') then create role authenticated nologin; end if;
+    if not exists(select 1 from pg_roles where rolname='service_role') then create role service_role nologin; end if;
+    end $$;
+    create table auth.users(id uuid primary key);
+    create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb $$;
+    create function auth.uid() returns uuid language sql stable as $$ select (auth.jwt()->>'sub')::uuid $$;
+    create function auth.role() returns text language sql stable as $$ select auth.jwt()->>'role' $$;
+    grant usage on schema public,auth to anon,authenticated,service_role;
+    grant execute on all functions in schema auth to anon,authenticated,service_role;`);
+  await admin.query(await readFile(new URL('../migrations/202609180001_core.sql',import.meta.url),'utf8'));
+  await clock('2026-09-14T09:00:00Z');
+  const a=await user(), b=await user();
+  let m;
+  await check('new authenticated account gets onboarding null',async()=>assert.deepEqual(await rpc(randomUUID(),'hl_consents'),{profile:null}));
+  await check('no cloud consent means no sync or rewards',async()=> {
+    const u=await user(false); await rejected(()=>sync(u),'CONSENT_REQUIRED');
+  });
+  await check('untrusted source, negative steps, future date rejected',async()=> {
+    await rejected(()=>sync(a,3000,1,'2026-09-14',{category:'manual'}),'SOURCE_REJECTED');
+    await rejected(()=>sync(a,-1),'INVALID_INPUT');
+    await rejected(()=>sync(a,3000,1,'2026-09-15'),'INVALID_INPUT');
+    await rejected(()=>sync(a,3000,1,'2026-09-14',{observed:'2026-09-15T01:00:00Z'}),'INVALID_INPUT');
+  });
+  await check('accepted summary, source pinning, revision replay',async()=> {
+    m=await sync(a); assert.equal(m.status,'accepted');
+    assert.deepEqual(await sync(a),m);
+    await rejected(()=>sync(a,5000,1),'REVISION_CONFLICT');
+    await rejected(()=>sync(a,5000,2,'2026-09-14',{pin:randomUUID()}),'SOURCE_PINNED');
+    await rejected(()=>sync(a,5000,2,'2026-09-14',{category:'apple_watch'}),'SOURCE_PINNED');
+  });
+  await check('100 simultaneous distinct claim keys award one 10-point entitlement',async()=> {
+    const results=await Promise.all(Array.from({length:100},()=>rpc(a,'hl_claim',[m.instanceId,randomUUID()])));
+    assert.equal(results.reduce((sum,r)=>sum+r.addedPoints,0),10);
+    assert.equal((await rpc(a,'hl_points_summary')).availablePoints,10);
+    assert.equal((await rpc(a,'hl_ledger')).items.length,1);
+  });
+  await check('100 simultaneous identical keys preserve original response and one award',async()=> {
+    const summary=await sync(b), key=randomUUID();
+    const results=await Promise.all(Array.from({length:100},()=>rpc(b,'hl_claim',[summary.instanceId,key])));
+    assert.ok(results.every(r=>JSON.stringify(r)===JSON.stringify(results[0])));
+    assert.equal((await rpc(b,'hl_points_summary')).availablePoints,10);
+  });
+  await check('same-day tier topups 10 + 10 + 10 capped at 30',async()=> {
+    await sync(a,5000,2); assert.equal((await rpc(a,'hl_claim',[m.instanceId,randomUUID()])).addedPoints,10);
+    await sync(a,7000,3); assert.equal((await rpc(a,'hl_claim',[m.instanceId,randomUUID()])).addedPoints,10);
+    assert.equal((await rpc(a,'hl_claim',[m.instanceId,randomUUID()])).addedPoints,0);
+    assert.equal((await rpc(a,'hl_points_summary')).availablePoints,30);
+  });
+  await check('cross-user instance IDs and ledger ownership enforced',async()=> {
+    await rejected(()=>rpc(b,'hl_claim',[m.instanceId,randomUUID()]),'NOT_FOUND');
+    const rows=await session(b,async c=>(await c.query('select * from public.daily_activity_summaries')).rows);
+    assert.equal(rows.length,1); assert.equal(rows[0].user_id,b);
+    assert.equal((await session(b,async c=>(await c.query('select points from public.point_ledger')).rows)).length,1);
+  });
+  await check('all public tables deny anonymous and direct client writes',async()=> {
+    const tables=(await admin.query("select tablename from pg_tables where schemaname='public'")).rows;
+    for(const {tablename} of tables) {
+      assert.match(tablename,/^[a-z_]+$/);
+      assert.equal((await admin.query('select has_table_privilege($1,$2,$3) ok',['anon',`public.${tablename}`,'SELECT'])).rows[0].ok,false);
+      for(const operation of ['INSERT','UPDATE','DELETE']) assert.equal((await admin.query('select has_table_privilege($1,$2,$3) ok',['authenticated',`public.${tablename}`,operation])).rows[0].ok,false);
+    }
+    await rejected(()=>session(a,c=>c.query("insert into public.point_ledger(account_key,kind,points,instance_id,entitlement_total) values(gen_random_uuid(),'daily_award',999,gen_random_uuid(),999)")),'permission denied');
+    await rejected(()=>session(a,c=>c.query('select * from private.admin_roles')),'permission denied');
+  });
+  await check('all owned tables isolate user B from user A; RPC helpers not public',async()=> {
+    for(const table of ['profiles','consent_events','mission_instances','daily_activity_summaries','activity_submissions','risk_flags','claim_requests','redemptions','appeals','deletion_jobs']) {
+      const column=table==='profiles'?'id':'user_id';
+      const n=await session(b,async c=>(await c.query(`select count(*)::int n from public.${table} where ${column}=$1`,[a])).rows[0].n);
+      assert.equal(n,0,table);
+    }
+    await rejected(()=>session(a,c=>c.query('select private.balance(gen_random_uuid())')),'permission denied');
+    await rejected(()=>session(a,c=>c.query('select public.hl_deletion_jobs()')),'permission denied');
+  });
+  await check('ledger and published rules are immutable even through owner update',async()=> {
+    await rejected(()=>admin.query('update public.point_ledger set points=999'),'IMMUTABLE_RECORD');
+    await rejected(()=>admin.query("update public.mission_versions set weekly_goal=5000"),'IMMUTABLE_RECORD');
+  });
+  await check('competing published versions cannot create a second business instance',async()=> {
+    await admin.query("insert into public.mission_versions(version,effective_from) values('steps-v2','2026-09-14')");
+    const items=(await rpc(a,'hl_missions')).items; assert.equal(items.find(x=>x.kind==='daily_steps').ruleVersion,'steps-v1');
+    await rejected(()=>admin.query("insert into public.mission_instances(user_id,kind,period_start,rule_version,selected_goal) values($1,'daily_steps','2026-09-14','steps-v2',3000)",[a]),'duplicate key');
+  });
+  await check('downward and excessive revisions stay pending without reducing earned points',async()=> {
+    assert.equal((await sync(a,4000,4)).status,'pending_review');
+    const pending=await sync(a,40000,5); assert.equal(pending.status,'pending_review');
+    assert.deepEqual(await sync(a,40000,5),pending);
+    await rejected(()=>sync(a,6000,5),'REVISION_CONFLICT');
+    assert.equal((await rpc(a,'hl_points_summary')).availablePoints,30);
+    const empty=await user(); assert.equal((await sync(empty,50000)).eligibleSteps,null);
+  });
+  await check('forced ledger failure rolls back award projection and claim request',async()=> {
+    const u=await user(), s=await sync(u);
+    await admin.query("create function private.test_fail() returns trigger language plpgsql as $$ begin raise exception 'FORCED_FAILURE'; end $$; create trigger test_fail before insert on public.point_ledger for each row execute function private.test_fail();");
+    await rejected(()=>rpc(u,'hl_claim',[s.instanceId,randomUUID()]),'FORCED_FAILURE');
+    await admin.query('drop trigger test_fail on public.point_ledger; drop function private.test_fail()');
+    assert.equal((await rpc(u,'hl_points_summary')).availablePoints,0);
+    assert.equal((await rpc(u,'hl_missions')).items.find(x=>x.id===s.instanceId).awardedPoints,0);
+    assert.equal((await admin.query('select count(*)::int n from public.claim_requests where user_id=$1',[u])).rows[0].n,0);
+    assert.equal((await rpc(u,'hl_claim',[s.instanceId,randomUUID()])).addedPoints,10);
+  });
+  await check('mixed-tier racing revisions cannot exceed highest entitlement',async()=> {
+    const u=await user(), s=await sync(u,2999);
+    const results=await Promise.allSettled(Array.from({length:30},(_,i)=>sync(u,i%2?7000:5000,i+2).then(()=>rpc(u,'hl_claim',[s.instanceId,randomUUID()]))));
+    assert.ok(results.some(r=>r.status==='fulfilled'));
+    assert.equal((await rpc(u,'hl_points_summary')).availablePoints,30);
+  });
+  await check('weekly reward counts three distinct accepted days once',async()=> {
+    await clock('2026-09-15T09:00:00Z'); const d2=await sync(a,3000,1,'2026-09-15'); await rpc(a,'hl_claim',[d2.instanceId,randomUUID()]);
+    await clock('2026-09-16T09:00:00Z'); const d3=await sync(a,3000,1,'2026-09-16');
+    const claim=await rpc(a,'hl_claim',[d3.instanceId,randomUUID()]); assert.equal(claim.addedPoints,30); assert.equal(claim.weeklyAwardedPoints,20);
+    assert.equal((await rpc(a,'hl_claim',[d3.instanceId,randomUUID()])).addedPoints,0);
+    assert.equal((await rpc(a,'hl_points_summary')).availablePoints,70);
+  });
+  await check('weekly accepts three synced days without daily claims and supports direct weekly claim',async()=> {
+    const u=await user();
+    for(const day of ['2026-09-14','2026-09-15','2026-09-16']) { await clock(`${day}T09:00:00Z`); await sync(u,3000,1,day); }
+    const weekly=(await rpc(u,'hl_missions')).items.find(x=>x.kind==='weekly_consistency');
+    const result=await rpc(u,'hl_claim',[weekly.id,randomUUID()]); assert.equal(result.addedPoints,20); assert.equal(result.dailyAwardedPoints,0);
+    assert.equal((await rpc(u,'hl_claim',[weekly.id,randomUUID()])).addedPoints,0);
+  });
+  await check('server cutoff just before succeeds; equality blocks new revision and claim',async()=> {
+    const u=await user(); await clock('2026-09-17T03:59:59.999Z');
+    const s=await sync(u,3000,1,'2026-09-16'); assert.equal((await rpc(u,'hl_claim',[s.instanceId,randomUUID()])).addedPoints,10);
+    await clock('2026-09-17T04:00:00Z');
+    await rejected(()=>sync(u,5000,2,'2026-09-16'),'CUTOFF_PASSED');
+    await rejected(()=>rpc(u,'hl_claim',[s.instanceId,randomUUID()]),'CUTOFF_PASSED');
+  });
+  await clock('2026-09-14T09:00:00Z');
+  await check('consent withdrawal blocks queued claim and upload',async()=> {
+    const u=await user(), s=await sync(u); await rpc(u,'hl_set_consents',[true,true,false,false,'2026-09-18']);
+    await rejected(()=>rpc(u,'hl_claim',[s.instanceId,randomUUID()]),'CONSENT_REQUIRED'); await rejected(()=>sync(u,5000,2),'CONSENT_REQUIRED');
+  });
+  await check('forged admin metadata cannot pause; role+MFA required; pause preserves history',async()=> {
+    await rejected(()=>rpc(a,'hl_admin_pause',[true,'test incident pause'],{user_metadata:{role:'operator'},aal:'aal2'}),'FORBIDDEN');
+    await admin.query("insert into private.admin_roles(user_id,role) values($1,'operator')",[b]);
+    await rejected(()=>rpc(b,'hl_admin_pause',[true,'test incident pause']),'FORBIDDEN');
+    await rpc(b,'hl_admin_pause',[true,'test incident pause'],{aal:'aal2'});
+    await rejected(()=>rpc(a,'hl_claim',[m.instanceId,randomUUID()]),'REWARDS_PAUSED');
+    assert.equal((await rpc(a,'hl_points_summary')).availablePoints,70);
+    await rpc(b,'hl_admin_pause',[false,'test incident resolved'],{aal:'aal2'});
+  });
+  await check('two users contend for final demo inventory: one debit, one rejection',async()=> {
+    const reward=randomUUID(); await admin.query("insert into public.reward_catalog(id,title_key,points_cost,stock) values($1,'rewards.demo',10,1)",[reward]);
+    const responses=await Promise.allSettled([rpc(a,'hl_redeem',[reward,randomUUID()]),rpc(b,'hl_redeem',[reward,randomUUID()])]);
+    assert.equal(responses.filter(r=>r.status==='fulfilled').length,1);
+    assert.equal(responses.filter(r=>r.status==='rejected'&&r.reason.message==='OUT_OF_STOCK').length,1);
+    const winner=responses[0].status==='fulfilled'?a:b;
+    const redemption=responses.find(r=>r.status==='fulfilled').value;
+    await Promise.all(Array.from({length:10},()=>rpc(winner,'hl_cancel_redemption',[redemption.id])));
+    assert.equal((await admin.query("select count(*)::int n from public.point_ledger where redemption_id=$1 and kind='refund'",[redemption.id])).rows[0].n,1);
+    assert.equal((await admin.query('select stock from public.reward_catalog where id=$1',[reward])).rows[0].stock,1);
+    const poor=await user(); await rejected(()=>rpc(poor,'hl_redeem',[reward,randomUUID()]),'INSUFFICIENT_POINTS');
+    await rejected(()=>rpc(poor,'hl_cancel_redemption',[redemption.id]),'NOT_FOUND');
+  });
+  await check('cursor pagination has no duplicate ledger entries and balance reconciles',async()=> {
+    const first=await rpc(a,'hl_ledger',[2,null]), second=await rpc(a,'hl_ledger',[100,first.nextCursor]);
+    const ids=[...first.items,...second.items].map(r=>r.id); assert.equal(new Set(ids).size,ids.length);
+    const sum=[...first.items,...second.items].reduce((sum,r)=>sum+r.points,0);
+    assert.equal((await rpc(a,'hl_points_summary')).availablePoints,sum);
+    await rejected(()=>rpc(a,'hl_ledger',[101,null]),'INVALID_INPUT');
+  });
+  await check('export scoped to caller; appeals persisted and throttled',async()=> {
+    assert.equal((await rpc(a,'hl_export')).profile.id,a);
+    for(let i=0;i<5;i++) assert.equal((await rpc(a,'hl_create_appeal',['2026-09-14','请核实我的任务摘要'])).status,'open');
+    await rejected(()=>rpc(a,'hl_create_appeal',['2026-09-14','请核实我的任务摘要']),'RATE_LIMITED');
+  });
+  await check('recent OTP mandatory for deletion; deletion race cannot resurrect rewards',async()=> {
+    const u=await user(), s=await sync(u);
+    await rejected(()=>rpc(u,'hl_request_deletion',[],{amr:[{method:'token_refresh',timestamp:1789376400}]}),'REAUTHENTICATION_REQUIRED');
+    const responses=await Promise.allSettled([rpc(u,'hl_claim',[s.instanceId,randomUUID()]),rpc(u,'hl_request_deletion')]);
+    assert.equal(responses[1].status,'fulfilled');
+    await rejected(()=>sync(u,5000,2),'ACCOUNT_INACTIVE');
+    await rejected(()=>rpc(u,'hl_claim',[s.instanceId,randomUUID()]),'ACCOUNT_INACTIVE');
+    await rejected(()=>rpc(u,'hl_set_consents',[true,true,true,false,'2026-09-18']),'ACCOUNT_INACTIVE');
+    assert.equal((await session(u,async c=>(await c.query('select * from public.point_ledger')).rows)).length,0);
+    const job=responses[1].value.jobId;
+    await admin.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({role:'service_role'})]);
+    for(let i=0;i<2;i++) assert.equal((await admin.query('select public.hl_purge_deletion($1) r',[job])).rows[0].r.status,'purged');
+    assert.equal((await admin.query('select status from public.deletion_jobs where id=$1',[job])).rows[0].status,'pending');
+    for(let i=0;i<2;i++) assert.equal((await admin.query('select public.hl_complete_deletion($1) r',[job])).rows[0].r.status,'complete');
+    assert.equal((await admin.query('select count(*)::int n from public.daily_activity_summaries where user_id=$1',[u])).rows[0].n,0);
+    assert.equal((await admin.query('select account_key from public.profiles where id=$1',[u])).rows[0].account_key,null);
+    await rejected(()=>rpc(u,'hl_export'),'ACCOUNT_INACTIVE');
+  });
+  await check('demo source rejected in real backend, real source rejected in demo backend',async()=> {
+    const u=await user(); await rejected(()=>sync(u,3000,1,'2026-09-14',{category:'synthetic_demo',policy:'synthetic-demo-v1'}),'SOURCE_REJECTED');
+    await admin.query("update private.system_settings set demo_mode=true,project_label='healthloop-local-test'");
+    await rejected(()=>sync(u),'SOURCE_REJECTED');
+    assert.equal((await sync(u,3000,1,'2026-09-14',{category:'synthetic_demo',policy:'synthetic-demo-v1'})).status,'accepted');
+    await admin.query("update private.system_settings set demo_mode=false,project_label='healthloop-real-unconfigured'");
+  });
+  console.log(`\n${passed} PostgreSQL integration checks passed; 100-way concurrent claims executed twice.`);
+  console.log('Auth JWT claims were injected by the privileged test fixture; this does not verify Supabase Auth/OTP or Edge network delivery.');
+} finally {
+  await admin.query("create or replace function private.server_now() returns timestamptz language sql volatile set search_path='' as $$ select clock_timestamp(); $$");
+  admin.release(); await pool.end();
+}

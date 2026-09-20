@@ -1,0 +1,6 @@
+import { expect,it } from 'vitest';
+import { createChunkedStorage } from './secure-storage-core';
+function setup(){const data=new Map<string,string>();let id=0;const storage=createChunkedStorage({get:async k=>data.get(k)??null,set:async(k,v)=>{await Promise.resolve();data.set(k,v)},remove:async k=>{data.delete(k)}},()=>String(++id));return {data,storage}}
+it('serializes rapid consent changes so withdrawal wins and removes superseded chunks',async()=>{const {data,storage}=setup();const a=storage.setItem('consent.a','true');const b=storage.setItem('consent.a','false');await Promise.all([a,b]);expect(await storage.getItem('consent.a')).toBe('false');expect(data.size).toBe(2)});
+it('keeps long credentials in bounded chunks and clears every chunk on logout',async()=>{const {data,storage}=setup();const token='a'.repeat(7100);await storage.setItem('auth',token);expect(await storage.getItem('auth')).toBe(token);expect([...data.values()].every(v=>v.length<=1800)).toBe(true);await storage.removeItem('auth');expect(data.size).toBe(0);expect(await storage.getItem('auth')).toBeNull()});
+it('reads after an outstanding withdrawal wait for the write',async()=>{const {storage}=setup();await storage.setItem('consent.a','true');const write=storage.setItem('consent.a','false');expect(await storage.getItem('consent.a')).toBe('false');await write});

@@ -1,0 +1,7 @@
+Read the applicable AGENTS.md and the complete MEGA_PROMPT.md in this repository. Inspect the existing code, dependencies and git status, then implement HealthLoop against docs/requirements.md or docs/requirements.json.
+
+Do not stop at a plan or static screens. Start with a tested end-to-end core slice: authentication, native health adapter, consented summary synchronization, server-side mission evaluation, atomic points posting and ledger display.
+
+Preserve Simplified Chinese UI, B/C requirement ownership, server-authoritative rewards, health-data privacy and the independent testnet-only Lab. Use dependency and acceptance gates, not a delivery calendar.
+
+Run the checks the environment supports. Clearly separate real device verification from synthetic tests. Leave code, test evidence and an implementation checkpoint; report genuine blockers without fabricating success. Do not spend, publish, change production systems or broadcast transactions without explicit approval.

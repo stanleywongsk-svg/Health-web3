@@ -1,0 +1,31 @@
+PASS new authenticated account gets onboarding null
+PASS no cloud consent means no sync or rewards
+PASS untrusted source, negative steps, future date rejected
+PASS accepted summary, source pinning, revision replay
+PASS 100 simultaneous distinct claim keys award one 10-point entitlement
+PASS 100 simultaneous identical keys preserve original response and one award
+PASS same-day tier topups 10 + 10 + 10 capped at 30
+PASS cross-user instance IDs and ledger ownership enforced
+PASS all public tables deny anonymous and direct client writes
+PASS anonymous SQL sessions cannot read tables or execute business RPCs
+PASS all owned tables isolate user B from user A; RPC helpers not public
+PASS ledger and published rules are immutable even through owner update
+PASS competing published versions cannot create a second business instance
+PASS downward and excessive revisions stay pending without reducing earned points
+PASS forced ledger failure rolls back award projection and claim request
+PASS mixed-tier racing revisions cannot exceed highest entitlement
+PASS weekly reward counts three distinct accepted days once
+PASS weekly accepts three synced days without daily claims and supports direct weekly claim
+PASS implicit weekly bonus uses its own pinned cutoff before, at, and after equality
+PASS server cutoff just before succeeds; equality blocks new revision and claim
+PASS consent withdrawal blocks queued claim and upload
+PASS exhausted consent budget cannot block withdrawal but still blocks grants and mixed upgrades
+PASS forged admin metadata cannot pause; role+MFA required; pause preserves history
+PASS two users contend for final demo inventory: one debit, one rejection
+PASS cursor pagination has no duplicate ledger entries and balance reconciles
+PASS export scoped to caller; appeals persisted and throttled
+PASS recent OTP mandatory for deletion; deletion race cannot resurrect rewards
+PASS demo source rejected in real backend, real source rejected in demo backend
+
+28 PostgreSQL integration checks passed; 100-way concurrent claims executed twice.
+Auth JWT claims were injected by the privileged test fixture; this does not verify Supabase Auth/OTP or Edge network delivery.

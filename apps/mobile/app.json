@@ -1,0 +1,1 @@
+{"expo":{"name":"健康循环","slug":"healthloop","version":"0.1.0","orientation":"portrait","scheme":"healthloop","userInterfaceStyle":"light","platforms":["ios"],"ios":{"bundleIdentifier":"com.healthloop.app","supportsTablet":false},"plugins":["expo-secure-store","./plugins/with-healthkit.js"]}}

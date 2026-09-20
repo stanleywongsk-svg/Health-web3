@@ -1,0 +1,978 @@
+{
+  "format_version": 1,
+  "created_at_utc": "2026-09-20T07:47:58.510205+00:00",
+  "source_commit": "5387b4955997d8d2a3a7f4fa2e1567969cec9d82",
+  "source_tree": "f4f55cb9b8773a96d6e145a0e0c218cf3bbf49a5",
+  "branch_refs": {
+    "refs/heads/impl/backend": "2fac14274e6b41e9efbb3108c9d3d5f7db28cd47",
+    "refs/heads/impl/domain": "4b97a7d2b7356be5cf74eed4a2d9fe1d18f1325f",
+    "refs/heads/impl/mobile": "9da3490808250822f947afdd04eb972a01f49fcd",
+    "refs/heads/main": "5387b4955997d8d2a3a7f4fa2e1567969cec9d82",
+    "refs/heads/resume/environment": "5393cce9df2ac8952e058c9585ca4734778c9a58",
+    "refs/heads/resume/mobile-consent": "162e6d866d068bc73d5b8ef9ed7a310fff875aac",
+    "refs/heads/resume/sync-flow": "986999c9b71afb7799bbda4bd551df829051a7c5"
+  },
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "mode": "100644",
+      "git_blob": "21a8dfc43ba3d44e432d7522414c016faa029254",
+      "bytes": 1225,
+      "sha256": "3a38110b7b1db5b51f6496e0e5d76483d5a86066b9417db9aede2373d2cffd99"
+    },
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "git_blob": "59e856345cf425f1f71db19db080f3aa1639547e",
+      "bytes": 168,
+      "sha256": "9e5d894bfe395d8cae51dc91f642a2aeb715f8eef18396d626025167ede75575"
+    },
+    {
+      "path": ".npmrc",
+      "mode": "100644",
+      "git_blob": "c9a199503fa8e250bc7497015cd3d63668713192",
+      "bytes": 55,
+      "sha256": "12da8e077b158ab54a9fcdd7e4fa492f788715f672f4d02e5b6a03ec2ca0c311"
+    },
+    {
+      "path": ".nvmrc",
+      "mode": "100644",
+      "git_blob": "60ade1ae01e833a5c291c47883bf26fb031f7727",
+      "bytes": 8,
+      "sha256": "7e8a2fa94951112b894a3dbe3d05efef5e9263741fa49125f0a70f40fedab4cc"
+    },
+    {
+      "path": "AGENTS.md",
+      "mode": "100644",
+      "git_blob": "a30d2a7840fa1416c7aed132866ac9c442780c4b",
+      "bytes": 2948,
+      "sha256": "4328902e0b1a5487d36dfda4eb490cba06acaaba1b278899d2b1a6bf544450a1"
+    },
+    {
+      "path": "HealthLoop_Codex_Kit/AGENTS.md",
+      "mode": "100644",
+      "git_blob": "a30d2a7840fa1416c7aed132866ac9c442780c4b",
+      "bytes": 2948,
+      "sha256": "4328902e0b1a5487d36dfda4eb490cba06acaaba1b278899d2b1a6bf544450a1"
+    },
+    {
+      "path": "HealthLoop_Codex_Kit/CONTINUE_PROMPT.txt",
+      "mode": "100644",
+      "git_blob": "7fa3c0e817232d1689c786451640c3df8d1eafed",
+      "bytes": 531,
+      "sha256": "3d15df8e5e110dfa1359242233d50a9396487bef06ae6041c164c06af0f95448"
+    },
+    {
+      "path": "HealthLoop_Codex_Kit/LAUNCH_PROMPT.txt",
+      "mode": "100644",
+      "git_blob": "1645f4ec2f3dbedb25d561409e3767fe982dbf66",
+      "bytes": 984,
+      "sha256": "501f1fdeb125b1207996e986332e8728f16cda71c84cd66dd2fe0e37fa07f7c1"
+    },
+    {
+      "path": "HealthLoop_Codex_Kit/MEGA_PROMPT.md",
+      "mode": "100644",
+      "git_blob": "caf7dc93df2d699aa4c8359459ca394aab1fbc37",
+      "bytes": 49028,
+      "sha256": "4a2fd53736d344c4dbf6d678c06fdf91d2cd806908b1dfe99185aa1041d7f635"
+    },
+    {
+      "path": "HealthLoop_Codex_Kit/START_HERE.md",
+      "mode": "100644",
+      "git_blob": "de030df708a41924f5e3a2be958cbd90318618e8",
+      "bytes": 2947,
+      "sha256": "7cfbcf22ff81f3f42385ac1a5dce249c6b37b0340d70e00341ae1d1d45bb92bd"
+    },
+    {
+      "path": "HealthLoop_Codex_Kit/docs/SOURCES.md",
+      "mode": "100644",
+      "git_blob": "0e4851c52427a7c8e13e018ef4d3446f7f343683",
+      "bytes": 3921,
+      "sha256": "6d32b8904da36afe8d01c7bd06d4966266ada0d658bbd9be84e4e77a9f68aa2a"
+    },
+    {
+      "path": "HealthLoop_Codex_Kit/docs/requirements.json",
+      "mode": "100644",
+      "git_blob": "b63f38c291c50a3931aa7c4d194b0850cab9078e",
+      "bytes": 20355,
+      "sha256": "d6f9ea7766bf6d71679a6bbc8689bedad3a9c280cafb8a98e2a70c0585548ee0"
+    },
+    {
+      "path": "HealthLoop_Codex_Kit/docs/requirements.md",
+      "mode": "100644",
+      "git_blob": "17f761f0176211115b708a7098b86a91b85ebaa6",
+      "bytes": 8351,
+      "sha256": "1bff308a767f9529229a3bbad02690350c9bdedb2cba3f62f25b26dbddb41e6b"
+    },
+    {
+      "path": "HealthLoop_Codex_Kit/planning/HealthLoop_商业计划与产品规格_Codex开发版.docx",
+      "mode": "100644",
+      "git_blob": "17352db1e836cfc8be5fd0fa31b451d2a8052f72",
+      "bytes": 75061,
+      "sha256": "c1c4ebba5ed5782c3057e33835493dda2d3b1ac009c8ab9cd13853d654d1c892"
+    },
+    {
+      "path": "HealthLoop_Codex_Kit/planning/HealthLoop_需求清单_两人负责_Codex开发版.xlsx",
+      "mode": "100644",
+      "git_blob": "1e1e9cac2dc2c8e95bad1f0445a454afd7d1e259",
+      "bytes": 44435,
+      "sha256": "e77525e6b43e3cc868fecc3886f929f85da916341bfda5900dbbb3270c230e5d"
+    },
+    {
+      "path": "MEGA_PROMPT.md",
+      "mode": "100644",
+      "git_blob": "caf7dc93df2d699aa4c8359459ca394aab1fbc37",
+      "bytes": 49028,
+      "sha256": "4a2fd53736d344c4dbf6d678c06fdf91d2cd806908b1dfe99185aa1041d7f635"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "git_blob": "e303a2b5325c86d1e349e1dc982e4011c6726917",
+      "bytes": 5645,
+      "sha256": "9e102f6ca253675bf0bc6b345b85789ce16631dc5bd9deab2c908706c6f1a8ba"
+    },
+    {
+      "path": "apps/mobile/.env.example",
+      "mode": "100644",
+      "git_blob": "1e34f9a9703c9de965a191c40369658a5032ea04",
+      "bytes": 370,
+      "sha256": "8a76e0c135f7e379748ceb9b2b55e118634db64cbcfaa5d6d865205c1d7bf55c"
+    },
+    {
+      "path": "apps/mobile/NATIVE_VERIFICATION.md",
+      "mode": "100644",
+      "git_blob": "805f2f198331119ec4c77d35eacca4ebbd293ffd",
+      "bytes": 5379,
+      "sha256": "6b7ba968fe0cc948a2daf9a3228e123824b357173d91d0c58628de96bd119570"
+    },
+    {
+      "path": "apps/mobile/app.json",
+      "mode": "100644",
+      "git_blob": "7d3c23b19a25e603b3ea178e525f41c29a6312c5",
+      "bytes": 300,
+      "sha256": "692c4de3b9bed6df2667748914abccb167bf82fbb1f4f298c90146aee93c2162"
+    },
+    {
+      "path": "apps/mobile/index.js",
+      "mode": "100644",
+      "git_blob": "2f639b07e8a9d0dfd593addbe5f1ebaca9dcc015",
+      "bytes": 144,
+      "sha256": "9aa48d70c200dbfcbe1488c84c0592770b1f41016d2ee6c4bac423d492c8e4a2"
+    },
+    {
+      "path": "apps/mobile/modules/healthloop-health/LICENSE",
+      "mode": "100644",
+      "git_blob": "30b20e3b5f0f470947ba9480d90587ba07c137b4",
+      "bytes": 1106,
+      "sha256": "fb3ca4a837f5779e83cef89b78253a8949cfb9429c340309f62d0465ec6610b4"
+    },
+    {
+      "path": "apps/mobile/modules/healthloop-health/expo-module.config.json",
+      "mode": "100644",
+      "git_blob": "eba042f2ba5cc7ec2d44321697470f34eb1a2855",
+      "bytes": 71,
+      "sha256": "801c0b3ac0b38b2b843d478891e4f50cdfd957b0d7bcd765396429272bd59c99"
+    },
+    {
+      "path": "apps/mobile/modules/healthloop-health/ios/HealthLoopHealth.podspec",
+      "mode": "100644",
+      "git_blob": "858ee91ce8e5f323274d8bfe4088796cf37d11c5",
+      "bytes": 613,
+      "sha256": "88d491c093c49d2cbb29bc944b9e8334c4419aaff613a27b2a0f9c5960ad133f"
+    },
+    {
+      "path": "apps/mobile/modules/healthloop-health/ios/HealthLoopHealthModule.swift",
+      "mode": "100644",
+      "git_blob": "337921491791a90ae15abe52f4c146aba026c181",
+      "bytes": 4695,
+      "sha256": "ba26bcb58b50e48aaed610c2b63b631a0031e475c4f77d53c3fb3359a938fb1f"
+    },
+    {
+      "path": "apps/mobile/modules/healthloop-health/src/HealthLoopHealthModule.ts",
+      "mode": "100644",
+      "git_blob": "d410a9832e9184ba3c401bdd16c925492fa9fea2",
+      "bytes": 727,
+      "sha256": "41bb91ab5c5f39d698bb2ba5b4687715c26e4acfb5f1074fb5d22110b9bae1f5"
+    },
+    {
+      "path": "apps/mobile/package.json",
+      "mode": "100644",
+      "git_blob": "04e51f040df4de6e9ad9bd36243cc86a5e7df440",
+      "bytes": 783,
+      "sha256": "8353afc7ff86f2c4c257b9b5fd58519fe7fee15989f608e824a52898937a1cb6"
+    },
+    {
+      "path": "apps/mobile/plugins/with-healthkit.js",
+      "mode": "100644",
+      "git_blob": "7c5cb04b5122f2fb70dfcd9a5aa13f63852496d0",
+      "bytes": 602,
+      "sha256": "3a5ad5e975dc9954a8860e31fcbc2fde9d823d422f267a7e57b734033174d17c"
+    },
+    {
+      "path": "apps/mobile/src/app.tsx",
+      "mode": "100644",
+      "git_blob": "1553b1d64ec9723a2ba1933342bdcca463036324",
+      "bytes": 4542,
+      "sha256": "6788412453feec1a4bdebfb8fb919e7370f18c9969e5068840328eb69e7499d0"
+    },
+    {
+      "path": "apps/mobile/src/components/ui.tsx",
+      "mode": "100644",
+      "git_blob": "7244efa4ff6922392e1e2401a72d75cdff46e636",
+      "bytes": 2758,
+      "sha256": "f3914ecaa22dac8709a0be8086e33e5a014bddf56942265b597a5e9c3124703f"
+    },
+    {
+      "path": "apps/mobile/src/i18n.ts",
+      "mode": "100644",
+      "git_blob": "b6b61ecdce937060d71da179ed3f33b27933f30a",
+      "bytes": 9401,
+      "sha256": "dc359e482c651d4f0dbf75d00b5aa92094523212f06589a15a9553e19e54a51d"
+    },
+    {
+      "path": "apps/mobile/src/screens/main.tsx",
+      "mode": "100644",
+      "git_blob": "97551f2dc0c59dd1d295c180e7ef29e342a9634f",
+      "bytes": 11784,
+      "sha256": "2086d77b82af7230185184957533a25025602be07e44a4ec5e06b970ffde0d80"
+    },
+    {
+      "path": "apps/mobile/src/services/health.ts",
+      "mode": "100644",
+      "git_blob": "233a143f4703a13a74196bd80deecb22aae88692",
+      "bytes": 3754,
+      "sha256": "3ebdbf9621252a3dab4035c21439b877d33c94fc5af6e6147c67f602d6d57cab"
+    },
+    {
+      "path": "apps/mobile/src/services/runtime.ts",
+      "mode": "100644",
+      "git_blob": "63f1509d4c2056c83161362d146d2ebd0ce3ecf0",
+      "bytes": 1045,
+      "sha256": "1e396e2c8c87366e3226a686bf92359c0e02690f3de235ff0c0bfdfbb14a721a"
+    },
+    {
+      "path": "apps/mobile/src/services/secure-storage.ts",
+      "mode": "100644",
+      "git_blob": "c5a3e3e716d8b3ecf3ecb7fe4e0994f6a05e6d28",
+      "bytes": 479,
+      "sha256": "db44fb723bcf992add3f7452765daa6cd2e8e742324d2b73feb023d26cadf329"
+    },
+    {
+      "path": "apps/mobile/src/services/use-healthloop.ts",
+      "mode": "100644",
+      "git_blob": "a6d86c0739c867aab81b5c705f7cc404356b9a72",
+      "bytes": 16709,
+      "sha256": "c667248f5f0017d748e35788a1624c3197a8a3119a818d6e6b42d2c36828c69b"
+    },
+    {
+      "path": "apps/mobile/src/theme.ts",
+      "mode": "100644",
+      "git_blob": "b49b76526beff0fd66c05ea2c52d30a2166c88cd",
+      "bytes": 175,
+      "sha256": "aa7d6a081950acbbe142055e3023ed7d526211dd00b47a21bd3942efb49c4c72"
+    },
+    {
+      "path": "apps/mobile/src/utils/account-sequence.test.ts",
+      "mode": "100644",
+      "git_blob": "f6c0922fd9b1cfc3410a94cffea39fdc120cd5dc",
+      "bytes": 1497,
+      "sha256": "ba2b15934afe4d77310d479b11b85aca8ea77641071cedf2d0b6de3ef33520c1"
+    },
+    {
+      "path": "apps/mobile/src/utils/account-sequence.ts",
+      "mode": "100644",
+      "git_blob": "ede650cca5cec4a1787d1fe2c074aa9f13fbd260",
+      "bytes": 427,
+      "sha256": "a21bca5a61eef0c5d611e8abbea4cb0b1ca33577aa96e7ae56ea6a4bbde7faf9"
+    },
+    {
+      "path": "apps/mobile/src/utils/activity-sync.test.ts",
+      "mode": "100644",
+      "git_blob": "8519ac0e2b1a9f869ab13ba402fb3190cc88c695",
+      "bytes": 12200,
+      "sha256": "05c48828aa0d4daf59e0c070a78dfb97155f1632e3daabd1e81d0cfa38b8d0ed"
+    },
+    {
+      "path": "apps/mobile/src/utils/activity-sync.ts",
+      "mode": "100644",
+      "git_blob": "69ea577dfeb6ad387617022cfd4a469a2191ea85",
+      "bytes": 9633,
+      "sha256": "f4db0bf87344978a1cb6494f33739b8d237f9c566c25e64807d1a70fdece124a"
+    },
+    {
+      "path": "apps/mobile/src/utils/consent-controller.test.ts",
+      "mode": "100644",
+      "git_blob": "f3203aad22a164e4efa808e13baa38c45e715c95",
+      "bytes": 9992,
+      "sha256": "e32fa448784360fcedca3d185e34e91c81e47f29c740f37cad545b7cd239330d"
+    },
+    {
+      "path": "apps/mobile/src/utils/consent-controller.ts",
+      "mode": "100644",
+      "git_blob": "b985b255b12bc86fc0b4a16146f3034295672e29",
+      "bytes": 10588,
+      "sha256": "f31baf968fd66851e998dc1178e728f4597bedfeb3733fd9956d4acc4d07f82f"
+    },
+    {
+      "path": "apps/mobile/src/utils/consent-gate.test.ts",
+      "mode": "100644",
+      "git_blob": "8119d0203783258a66c90f5c7c47cfe149487c6b",
+      "bytes": 1048,
+      "sha256": "a29766af2e93c81506b3ae9a88865620ace870a73a8f159f2de9a944a9423c6f"
+    },
+    {
+      "path": "apps/mobile/src/utils/consent-gate.ts",
+      "mode": "100644",
+      "git_blob": "db2effe71259abab87e98bced54ddc870801a793",
+      "bytes": 1234,
+      "sha256": "dbeaf85c3baac0a5567eecc44f08a92e97750ee817887e406e8e6b4d790ec7b2"
+    },
+    {
+      "path": "apps/mobile/src/utils/environment.test.ts",
+      "mode": "100644",
+      "git_blob": "396efaafea6434ef42ac6eb6ea7583b401d9bcb6",
+      "bytes": 1417,
+      "sha256": "378d4c2c20db01012be3ef72353f37b7d16d7a6defb30d96ec5f94bf75c7affb"
+    },
+    {
+      "path": "apps/mobile/src/utils/environment.ts",
+      "mode": "100644",
+      "git_blob": "545cb23ec10074af20c8ea08ebea52a04d3e200e",
+      "bytes": 2243,
+      "sha256": "f20746ab9047db47958ce55b241f71f47b2016147d6a203f0d8f4b0db913fadd"
+    },
+    {
+      "path": "apps/mobile/src/utils/error-message.ts",
+      "mode": "100644",
+      "git_blob": "20b2aee9bceea819b69a3038d6b2df3009285959",
+      "bytes": 1196,
+      "sha256": "556332735ef764b2308daac1e96600112bdc1189420be18f9956c37d61b86140"
+    },
+    {
+      "path": "apps/mobile/src/utils/secure-storage-core.test.ts",
+      "mode": "100644",
+      "git_blob": "68a6034798fb0241abad99316fc133faeedb20c2",
+      "bytes": 1350,
+      "sha256": "831a77d047fd64e4cd195867d30f18387af773d58946b935deee9d886aa799b0"
+    },
+    {
+      "path": "apps/mobile/src/utils/secure-storage-core.ts",
+      "mode": "100644",
+      "git_blob": "f90de06eb746d6f9958bc601b001ca8e3570ccf6",
+      "bytes": 1846,
+      "sha256": "bc7d73f21434523a62fffc484411e0eaccf2ec1aa35a40ea0c28833172698433"
+    },
+    {
+      "path": "apps/mobile/tsconfig.json",
+      "mode": "100644",
+      "git_blob": "a2b6ae7a5f40001b10be936c92c0cdd9cd24f1ab",
+      "bytes": 244,
+      "sha256": "c0212519fedc5f8b691d0f8347e785c9129df632e30da3431ab5298b4d1a8ebc"
+    },
+    {
+      "path": "docs/API.md",
+      "mode": "100644",
+      "git_blob": "3a5d805a13a167a9888241f7d99ba85c232f2236",
+      "bytes": 4689,
+      "sha256": "3d9215438952ea4fee25806a70a5e34954b697cc281b24547e1a5d62ddde4352"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "mode": "100644",
+      "git_blob": "c66d810dbe31f818ae0af47e2897c9547aee03cb",
+      "bytes": 1723,
+      "sha256": "52e0557524a9c8ba99e8573b5fa5984d505ce6b0bd43f52afa561ed7a9d462cb"
+    },
+    {
+      "path": "docs/BACKEND_NOTES.md",
+      "mode": "100644",
+      "git_blob": "af0bb9f73598bede975956bb3103a0b569ddc099",
+      "bytes": 16104,
+      "sha256": "3a6dc467f3bca87bbc13472b3869019cb6b35f85800871e887efb7502dd03353"
+    },
+    {
+      "path": "docs/BACKUP_AND_RESTORE.md",
+      "mode": "100644",
+      "git_blob": "d80885f2cf36c94deae0b1d1111166f3610f4799",
+      "bytes": 4448,
+      "sha256": "97999472009d07354fe3cc2f6e688f28b8826a63237f9d04560f501f3f450014"
+    },
+    {
+      "path": "docs/CONTINUE_PROMPT.md",
+      "mode": "100644",
+      "git_blob": "397402595b8a287cbd94fb69f4704eb56f9c2ab8",
+      "bytes": 13743,
+      "sha256": "f57c606f8aefd88e786940551ec2f3fad15b7631f9750611d0c7a0147a614266"
+    },
+    {
+      "path": "docs/DECISIONS.md",
+      "mode": "100644",
+      "git_blob": "91325eb5f86aa694efc905483f346616a3fb606a",
+      "bytes": 3441,
+      "sha256": "95196c4ad3d9390c90a826d40032a285ad24585123e9558b3fbbd08cc84bd576"
+    },
+    {
+      "path": "docs/DEVELOPMENT_KIT.md",
+      "mode": "100644",
+      "git_blob": "e9247ced10106717b522f18d70e094aff639a13b",
+      "bytes": 3317,
+      "sha256": "6d11b2bf10a79e0dbe2621387ded00d4f116cb8c99062e7ae0ba8b339eb526ef"
+    },
+    {
+      "path": "docs/DEVICE_SETUP.md",
+      "mode": "100644",
+      "git_blob": "40e221fe454641267e1c91fe1caf7af15440678a",
+      "bytes": 7293,
+      "sha256": "2bf421fa07a7704db104df619e7c693130a7d5b9d8116cdd63e178ca7e9a1e45"
+    },
+    {
+      "path": "docs/ENVIRONMENT_RECHECK.md",
+      "mode": "100644",
+      "git_blob": "a3d02b7beec4d34f5c54c042c896c1df814f447b",
+      "bytes": 5683,
+      "sha256": "50d480e044450722d7676ff157d469a74ad4b5d061b47bda231498bec62ad1e0"
+    },
+    {
+      "path": "docs/HUMAN_HANDOFF.md",
+      "mode": "100644",
+      "git_blob": "b031fddf7d74d3a2491073ad4a56a5a1d7e45182",
+      "bytes": 2157,
+      "sha256": "f896bce4c180fedc77c764df5a06dea4bd9f4e5ebd5564852c633a675060da0d"
+    },
+    {
+      "path": "docs/IMPLEMENTATION_STATUS.md",
+      "mode": "100644",
+      "git_blob": "878719ab6139d495665ea5b6f4d788d05529ad33",
+      "bytes": 18464,
+      "sha256": "1072561901aea9e22f1d0a30866adea588275ff60014ef83a5fef4b7677fa339"
+    },
+    {
+      "path": "docs/NATIVE_BUILD_EVIDENCE.md",
+      "mode": "100644",
+      "git_blob": "4020c2b212d75bd94a2c107731d51ba8abd7f6ba",
+      "bytes": 5937,
+      "sha256": "4b87e1474e05fe4d6d98338a80900bcd781ae9cb749bd2687360d909720bb2d3"
+    },
+    {
+      "path": "docs/OPERATIONS.md",
+      "mode": "100644",
+      "git_blob": "bf2a1944efbcb81d1b16721fd42c67241c2d276a",
+      "bytes": 2877,
+      "sha256": "2f0a14732d854401cc7c2cf44723537d1703983093e88a94df6819fe754bb35c"
+    },
+    {
+      "path": "docs/PRIVACY_DATA_MAP.md",
+      "mode": "100644",
+      "git_blob": "083d05d2464a99dacfad69caf2f0e0448fda21e9",
+      "bytes": 4071,
+      "sha256": "64e3ffbc5fdf720314b2f6e61d715819b52bcac0bfb0b88a03cdbd7fbed01a6f"
+    },
+    {
+      "path": "docs/SECURITY.md",
+      "mode": "100644",
+      "git_blob": "4c5782684b885e50ccb0a001198722870e45e824",
+      "bytes": 2036,
+      "sha256": "afe2ed5ab65a7d931fca84df0fbc190f50885f1a641b97704dba04b715b97ddc"
+    },
+    {
+      "path": "docs/SOURCES.md",
+      "mode": "100644",
+      "git_blob": "0e4851c52427a7c8e13e018ef4d3446f7f343683",
+      "bytes": 3921,
+      "sha256": "6d32b8904da36afe8d01c7bd06d4966266ada0d658bbd9be84e4e77a9f68aa2a"
+    },
+    {
+      "path": "docs/TEST_EVIDENCE.md",
+      "mode": "100644",
+      "git_blob": "d71695f9a0c67e4c8aa65857b6083e9585a3d36c",
+      "bytes": 15901,
+      "sha256": "b0db187689fbb408c727d8c459380029c6b6a119fd950ebe578be5ba69db86ab"
+    },
+    {
+      "path": "docs/UNFINISHED_REPORT.md",
+      "mode": "100644",
+      "git_blob": "4af4f8ea2dd32b3966caa478c040133efbedd4f4",
+      "bytes": 17295,
+      "sha256": "a32479dad8443deecc8ee95a9225e8baf61f256a6d63ec7032067e77bdfd91d5"
+    },
+    {
+      "path": "docs/archive/environment-evidence/Podfile.lock",
+      "mode": "100644",
+      "git_blob": "cec9dc61e4386731ef86ac94d7888cb525253044",
+      "bytes": 105375,
+      "sha256": "7a7de22e34400649e9c0365383ba2fab2f9d65ebf8841cba1e00fb4f202bc9d5"
+    },
+    {
+      "path": "docs/archive/environment-evidence/README.md",
+      "mode": "100644",
+      "git_blob": "c7c8d442587f04b451a40c271f9bece220202375",
+      "bytes": 1125,
+      "sha256": "a2cef96b51544c82c702210a91c9f5ac0994d15ed859fb879d8d54f5a7a7e212"
+    },
+    {
+      "path": "docs/archive/environment-evidence/environment-20260918.json",
+      "mode": "100644",
+      "git_blob": "db457ab243a4445800882a2017c2fa022d93a76e",
+      "bytes": 1348,
+      "sha256": "003eb62e13148c50fdd39d0071c61bb23a30ea3c68d02f49ffdb26e01aa6eca7"
+    },
+    {
+      "path": "docs/archive/environment-evidence/environment-20260920.json",
+      "mode": "100644",
+      "git_blob": "2e6a3b3d14295f73c6b8fdedcce2d0b0b2fc7adf",
+      "bytes": 123,
+      "sha256": "4585afaf7721ce3d7d8fc79890b50a9efc6077b427ba7362e52165eda637dd20"
+    },
+    {
+      "path": "docs/archive/environment-evidence/logs/healthloop-cocoapods-install.txt",
+      "mode": "100644",
+      "git_blob": "0f34c553e8f8e477afc8ce7cb0c12a4f3cbfb880",
+      "bytes": 2067,
+      "sha256": "10acd1e75cf0346d17d4c553c64bb28e00b84d35764eb413339f18e28775c0ed"
+    },
+    {
+      "path": "docs/archive/environment-evidence/logs/healthloop-env-next-docker_info.txt",
+      "mode": "100644",
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/archive/environment-evidence/logs/healthloop-env-next-simulator_sdk.txt",
+      "mode": "100644",
+      "git_blob": "6e6d4fdd31ae4523801047a43960026ee9544721",
+      "bytes": 117,
+      "sha256": "d1b2a0ba120c5ed114974236bbe896918d34179000af3251eceb9a223fd4a14a"
+    },
+    {
+      "path": "docs/archive/environment-evidence/logs/healthloop-env-next-xcode_version.txt",
+      "mode": "100644",
+      "git_blob": "105d0366588bd89a6d9c121e8742a7f59efc4f9c",
+      "bytes": 32,
+      "sha256": "bb7fc9a8f5e063e81975b33054b3a526c91bcccff263ad11d5bd8bcdbe8f0973"
+    },
+    {
+      "path": "docs/archive/environment-evidence/logs/healthloop-pg17.txt",
+      "mode": "100644",
+      "git_blob": "c1276c693c73ebfdbba7ab9c3e16acd0cf46f203",
+      "bytes": 225694,
+      "sha256": "ba4606171f233e2b81eb509ea9b6c8984d7462358aec2fbd7ede6ffe15507d89"
+    },
+    {
+      "path": "docs/archive/environment-evidence/logs/healthloop-pod-install-nospace.txt",
+      "mode": "100644",
+      "git_blob": "5051c90bfbf8b96cfdea5b55ed0def6e2f3431b6",
+      "bytes": 17825,
+      "sha256": "208feff4242ce2da33e838bbdb3a8c26dc513d9f69c947a165de8ecf0d505b3e"
+    },
+    {
+      "path": "docs/archive/environment-evidence/logs/healthloop-pod-install.txt",
+      "mode": "100644",
+      "git_blob": "65cc8763504491d71539cacc58bf210131874d37",
+      "bytes": 13616,
+      "sha256": "2a376bd4274367716433fdc678789bff8f97e3485bf482e93da6884451515b84"
+    },
+    {
+      "path": "docs/archive/environment-evidence/logs/healthloop-security-db-tests.txt",
+      "mode": "100644",
+      "git_blob": "0c2b6b2e0e7ec67a6d698db709a3a2426f44a22c",
+      "bytes": 2190,
+      "sha256": "c2da30da192cd6715e549c999c6be397f7271785964362c6a22322d936a73797"
+    },
+    {
+      "path": "docs/archive/environment-evidence/logs/healthloop-xcode-extract.txt",
+      "mode": "100644",
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/archive/environment-evidence/logs/healthloop-xcode-firstlaunch.txt",
+      "mode": "100644",
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/archive/environment-evidence/logs/healthloop-xcodebuild.txt",
+      "mode": "100644",
+      "git_blob": "9d5f2c92783598788096c45cf0f17cf57e5f76e9",
+      "bytes": 7094,
+      "sha256": "4410865d82d940057427fa9371ec456e6c00fd60c0a05b76c3a6254281271f3b"
+    },
+    {
+      "path": "docs/archive/unreferenced-git-blobs/651130582d73498ee9659e42302a1c4d706a4be3.txt",
+      "mode": "100644",
+      "git_blob": "651130582d73498ee9659e42302a1c4d706a4be3",
+      "bytes": 19485,
+      "sha256": "ace5bf4ad9a111f09a0c4f293fd5bf092eff8947bcf7a1fe354281a756882ffb"
+    },
+    {
+      "path": "docs/archive/unreferenced-git-blobs/884151e753ee72177378493edd7d2c3383724211.txt",
+      "mode": "100644",
+      "git_blob": "884151e753ee72177378493edd7d2c3383724211",
+      "bytes": 42971,
+      "sha256": "8c57d4159feb01ee1980d85aff6da4084b63a50048dac6f614b74f0921a6e404"
+    },
+    {
+      "path": "docs/archive/unreferenced-git-blobs/README.md",
+      "mode": "100644",
+      "git_blob": "4a8e1a791ed42c0d9f23f232053fce6dab1ea35f",
+      "bytes": 514,
+      "sha256": "ecacb98fe006954c91c13ab5d0f9b23d622ce5ceb66521abaeefe363d0636257"
+    },
+    {
+      "path": "docs/archive/unreferenced-git-blobs/a7a029b08954ccc57dac17d65e2bb1215ef1e6be.txt",
+      "mode": "100644",
+      "git_blob": "a7a029b08954ccc57dac17d65e2bb1215ef1e6be",
+      "bytes": 10482,
+      "sha256": "31a457c12603d8d3214a9898a7ce03d83223ff5740fb3b8c502f3f904c36abd0"
+    },
+    {
+      "path": "docs/archive/unreferenced-git-blobs/ebffbb2491cd3d3753d8bf53e868b47df46d7242.txt",
+      "mode": "100644",
+      "git_blob": "ebffbb2491cd3d3753d8bf53e868b47df46d7242",
+      "bytes": 15661,
+      "sha256": "c901f68a67f1a1e836e1cdfd382490d3006369d72a240e3e585d8dfab80dbaab"
+    },
+    {
+      "path": "docs/requirements.json",
+      "mode": "100644",
+      "git_blob": "b63f38c291c50a3931aa7c4d194b0850cab9078e",
+      "bytes": 20355,
+      "sha256": "d6f9ea7766bf6d71679a6bbc8689bedad3a9c280cafb8a98e2a70c0585548ee0"
+    },
+    {
+      "path": "docs/requirements.md",
+      "mode": "100644",
+      "git_blob": "17f761f0176211115b708a7098b86a91b85ebaa6",
+      "bytes": 8351,
+      "sha256": "1bff308a767f9529229a3bbad02690350c9bdedb2cba3f62f25b26dbddb41e6b"
+    },
+    {
+      "path": "docs/source-materials/HealthLoop_Codex_Mega_Prompt.txt",
+      "mode": "100644",
+      "git_blob": "caf7dc93df2d699aa4c8359459ca394aab1fbc37",
+      "bytes": 49028,
+      "sha256": "4a2fd53736d344c4dbf6d678c06fdf91d2cd806908b1dfe99185aa1041d7f635"
+    },
+    {
+      "path": "eslint.config.mjs",
+      "mode": "100644",
+      "git_blob": "2a312f79749b27cc0b58b54289389893dc427d51",
+      "bytes": 895,
+      "sha256": "5d546e9af95f65d783d5df0cfca31e554b0cd124a8c1037706d889f3f840545d"
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "git_blob": "72f321c1e0c6b9adb8a96c85ea1886c32eb40fcf",
+      "bytes": 1345,
+      "sha256": "00e6a2fc844d63c5daf7e8e28cd4c754b733d707626816d252f85ee6fe770914"
+    },
+    {
+      "path": "packages/api-client/package.json",
+      "mode": "100644",
+      "git_blob": "f17b2adf546d1225132610f420a69dc61a9b397f",
+      "bytes": 176,
+      "sha256": "292a8ee68cf9fd3de442c7713ed845a40bbc7794966579a4e40ac9d15c67cce4"
+    },
+    {
+      "path": "packages/api-client/src/index.test.ts",
+      "mode": "100644",
+      "git_blob": "86df2e325e5be24e285ba1cbfe834a50b47f6a02",
+      "bytes": 9792,
+      "sha256": "c3e7e81589285738ce2fc97195c96cbabad0c3190fc14278d805a1e05bd5fa08"
+    },
+    {
+      "path": "packages/api-client/src/index.ts",
+      "mode": "100644",
+      "git_blob": "bc72cd38fc3ddf9601a67586a029b7093e571f7a",
+      "bytes": 8996,
+      "sha256": "c899fc1bf857d09a62f9b50b2f56a1d1e75ca52e83434e9dd0484c6f8d262b33"
+    },
+    {
+      "path": "packages/domain/README.md",
+      "mode": "100644",
+      "git_blob": "38785541ab49612d24ca0092501ca53f40ecbda4",
+      "bytes": 2301,
+      "sha256": "e38adfa37dee0e4c636b895a7fd69be1acf2a1a91a2471ec6b6b9a6c6b5a6fac"
+    },
+    {
+      "path": "packages/domain/package.json",
+      "mode": "100644",
+      "git_blob": "989f9c22b15c050b174b0ec8463bf21a73965f11",
+      "bytes": 211,
+      "sha256": "46d3164ecdc5e66cf969d52ff14e45c4909517768bff04252eb1f157b624f5a3"
+    },
+    {
+      "path": "packages/domain/src/domain.test.ts",
+      "mode": "100644",
+      "git_blob": "6eaac620088daef0f857fcef52cae9a69b8f6b8c",
+      "bytes": 9173,
+      "sha256": "daf1c3da1c786a67dde00c9ccab9a64fd6341eaaf699e0995f80d0eb5c37d0fe"
+    },
+    {
+      "path": "packages/domain/src/index.ts",
+      "mode": "100644",
+      "git_blob": "b7e744accb77fae3c7d5dfc46fcd7b297d75aa21",
+      "bytes": 84,
+      "sha256": "5de399eec64ae30c9e6d52ae593c2cc6c12badbff13df9ce17c44958327f9f04"
+    },
+    {
+      "path": "packages/domain/src/rules.ts",
+      "mode": "100644",
+      "git_blob": "49176f6d8fa49f66eab031fd25f07bcaa6da3e7b",
+      "bytes": 8264,
+      "sha256": "6ce8cb11c6c449ed7792482e32e12e44aa2321d6a963a8a7a7e427e449616f1b"
+    },
+    {
+      "path": "packages/domain/src/schema.ts",
+      "mode": "100644",
+      "git_blob": "f3b6412c454b13c7a43185eec94f30ef0850fc27",
+      "bytes": 1303,
+      "sha256": "d626c2b14dbacbe8cdac31b65969edd82a0a27695402cf07d6dff5f648a5db7e"
+    },
+    {
+      "path": "packages/domain/src/synthetic.ts",
+      "mode": "100644",
+      "git_blob": "b3d9a8ae56b95ad64ef3e99e14161a72a51ffc93",
+      "bytes": 415,
+      "sha256": "9b2302f9acde757cd30e393113c62bc16ae1c604e432abc64a191687ae066b76"
+    },
+    {
+      "path": "packages/domain/src/time.ts",
+      "mode": "100644",
+      "git_blob": "7e1f1030d7cad2162ecefd65f1e0673bab3d7925",
+      "bytes": 2708,
+      "sha256": "1faf78b2dcb505240d880309c450035716f90471cdc666e4b16db8bbbaa1c767"
+    },
+    {
+      "path": "packages/health-provider/README.md",
+      "mode": "100644",
+      "git_blob": "9569d88ae3c3a66a6efbbd36f19cf86e3244b002",
+      "bytes": 4035,
+      "sha256": "a91a887055dd9808a7051e6687fa393dfd6980ba223bc3af626db5efd7d8ae38"
+    },
+    {
+      "path": "packages/health-provider/package.json",
+      "mode": "100644",
+      "git_blob": "ce8c97737b94888b1324b6d0836b0ef3a50c3e23",
+      "bytes": 241,
+      "sha256": "5c906d39bfa27639da5f6cb142713f77989c8ad90e785904929b1aab158e8867"
+    },
+    {
+      "path": "packages/health-provider/src/aggregation.ts",
+      "mode": "100644",
+      "git_blob": "dd0ad32883de09ee91692b15ce0613e4155e2ed7",
+      "bytes": 7757,
+      "sha256": "1e4e8f9d4d5d5d568e943ae471156adbbd3c4105d54df51bb5f43d9f77d5042c"
+    },
+    {
+      "path": "packages/health-provider/src/consent.ts",
+      "mode": "100644",
+      "git_blob": "4d8fdcea436cda46ff9c905ef9c6d1f53921940b",
+      "bytes": 2876,
+      "sha256": "52f8963c5591a0e6eece590159f16edf7b2b351717d43d7e4a6b2da82f3fa2e1"
+    },
+    {
+      "path": "packages/health-provider/src/health.test.ts",
+      "mode": "100644",
+      "git_blob": "db2ba3bde6ae2c73de3d0f6ba57a5fc9c6015b37",
+      "bytes": 10350,
+      "sha256": "92fb3d990c6ce5ccd58f4a659cdeec2f1c232e5e5f166d47b8a3a60a72dcdade"
+    },
+    {
+      "path": "packages/health-provider/src/index.ts",
+      "mode": "100644",
+      "git_blob": "1c772d98287244a236f2087233fad4cae0c72518",
+      "bytes": 92,
+      "sha256": "5d9d282f4ac95d16ea59ff266f85cdf80f8d0935f66ccca12347714bbef7034e"
+    },
+    {
+      "path": "packages/health-provider/src/synthetic.ts",
+      "mode": "100644",
+      "git_blob": "5af4637680312a9f100c61396799b1427d3ce75f",
+      "bytes": 1755,
+      "sha256": "a6e014e50f0adefd041564a0597f6ba9f7c5b8afdb3fdae7993c36e7308520ae"
+    },
+    {
+      "path": "packages/health-provider/src/types.ts",
+      "mode": "100644",
+      "git_blob": "69345468dd569d9073615a1f4af2e898ab7ad605",
+      "bytes": 2191,
+      "sha256": "4bcef5d3fc8568c4dc8a47b23472df298b2b7327cb9b98061235262458a88637"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "mode": "100644",
+      "git_blob": "b16082b68148cac34ac579d5efccbf3d064f0dc8",
+      "bytes": 256139,
+      "sha256": "78be65487557e73da0b43794cb8615f021eab3133d5424db2a51f60818f71356"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "mode": "100644",
+      "git_blob": "2d0832b0e73df784709e5855fdeda4720950c976",
+      "bytes": 58,
+      "sha256": "d27bba9805873d9582f2585dbb1f8e652f3a2cdda5f98c10eed2c1df1deaef8a"
+    },
+    {
+      "path": "scripts/check-boundaries.mjs",
+      "mode": "100644",
+      "git_blob": "7a3a45ac64ef1b855afb8e81b3ccd645b6a9b3c9",
+      "bytes": 3317,
+      "sha256": "67b0238ebbb20e09caefb93d497151698e02ea78a56eab2aa25a8f5238baa478"
+    },
+    {
+      "path": "scripts/check-ios-bundle.mjs",
+      "mode": "100644",
+      "git_blob": "2e459438990473d3be3f493d12a7743482823b36",
+      "bytes": 860,
+      "sha256": "4eba91a867ddded91de807e1d382cb6c85b3b267c0dcf2145aafb3bbb714978b"
+    },
+    {
+      "path": "scripts/database-guard.test.ts",
+      "mode": "100644",
+      "git_blob": "a9e79d8fc7d490707de879765cb5de16a651db5c",
+      "bytes": 870,
+      "sha256": "23705ea4e0a27327bb50266aaf5be9ec3476da6ad5cb5c16cd71796237efc1ed"
+    },
+    {
+      "path": "scripts/manual-gates.mjs",
+      "mode": "100644",
+      "git_blob": "26b5149a696eb07d07dd09d24214650b5d7e9aed",
+      "bytes": 385,
+      "sha256": "b86f7ff08c99dbf6157ffd02e45ce3a80830a7ecac9c87c23d9c39e756f2cd9f"
+    },
+    {
+      "path": "scripts/vertical-slice.db.test.mjs",
+      "mode": "100644",
+      "git_blob": "debeb648c09e87f1bb50b8ca7601e58d01668eba",
+      "bytes": 17870,
+      "sha256": "fe1d8aa6332baf62602c17b1ad5a680d5de682db54c21495970a2493ee495c34"
+    },
+    {
+      "path": "supabase/config.toml",
+      "mode": "100644",
+      "git_blob": "1e61a40e851f29e1347cfbd183c1be573141ab55",
+      "bytes": 1174,
+      "sha256": "928536fe3b557a62ee0b09940361d64e36fd73397e3c81699247955f1b3df098"
+    },
+    {
+      "path": "supabase/functions/core/.env.example",
+      "mode": "100644",
+      "git_blob": "cd94c6621056b1d4c6dc7c91cab6ad744b5defd8",
+      "bytes": 360,
+      "sha256": "0bdbf81e23196b155e16ffe336924b6ad9be6c20c818a0b7084457deaa8f8403"
+    },
+    {
+      "path": "supabase/functions/core/deno.json",
+      "mode": "100644",
+      "git_blob": "fef54bc8a5c38ad075c64f18215c9e63ba54e899",
+      "bytes": 478,
+      "sha256": "ad0864584844147b81938d7dfdad6d9b5a6e6d6c17eb82f8ac53ec21e656df14"
+    },
+    {
+      "path": "supabase/functions/core/deno.lock",
+      "mode": "100644",
+      "git_blob": "502fecccb8111c3644d1e3dc9b76f5f6d50137e2",
+      "bytes": 2315,
+      "sha256": "36522402cad2c94a58fd824de06b72be1780623f5fa4729501d166468e091e68"
+    },
+    {
+      "path": "supabase/functions/core/handler.test.ts",
+      "mode": "100644",
+      "git_blob": "2c8f28c1a9193fdba09fa8c6aaece8bbb0d86448",
+      "bytes": 6770,
+      "sha256": "7a509e08866760cb13f27286bb48675e5dcb080f567792b12755fc4333c298dd"
+    },
+    {
+      "path": "supabase/functions/core/handler.ts",
+      "mode": "100644",
+      "git_blob": "08895557b16cb17bfa3607efe46349e3f1a67a7f",
+      "bytes": 10370,
+      "sha256": "9808f536c811b1dbf91023892962c5dd7b21d32562d063f2981c22707c24cbb5"
+    },
+    {
+      "path": "supabase/functions/core/index.ts",
+      "mode": "100644",
+      "git_blob": "029283f979acabf969085eaa90f314462622e02b",
+      "bytes": 436,
+      "sha256": "3941f8e7853a86fa3ad52303c1e56f227b3631fc9c6127b778e58205561c983e"
+    },
+    {
+      "path": "supabase/functions/deletion-worker/run.ts",
+      "mode": "100644",
+      "git_blob": "a10888c6ed042f588883d2be93896a6d1831ed1a",
+      "bytes": 1580,
+      "sha256": "59cd782fb33ac5d734e56934e8862db308a3b146302a216456bfa698d98ddd0d"
+    },
+    {
+      "path": "supabase/migrations/202609180001_core.sql",
+      "mode": "100644",
+      "git_blob": "78df19a826ad326b8ed7f1a24ad69436532ab2aa",
+      "bytes": 43193,
+      "sha256": "1de499352911fc55ebb87e777d967e0afa0178dc7ccb1eff27b45c523b8333d9"
+    },
+    {
+      "path": "supabase/migrations/202609200001_consent_weekly_cutoff.sql",
+      "mode": "100644",
+      "git_blob": "a8f7ad2357f84db4891ef7f9b36eebb069d43f46",
+      "bytes": 5790,
+      "sha256": "e95dcd4019031c09e8046c21b9f4f8d42e2ceb035e168b5afb36451b4dcdfbc8"
+    },
+    {
+      "path": "supabase/seed.sql",
+      "mode": "100644",
+      "git_blob": "eed5dcb386ecc7f8f2d2698211a75be4e7b4de19",
+      "bytes": 443,
+      "sha256": "2cec76884d0befc0b0f05648244dcefecd2f3166586106bd3ec8c65f6abc0dce"
+    },
+    {
+      "path": "supabase/templates/otp.html",
+      "mode": "100644",
+      "git_blob": "2672fbaa8a7b4ef02a992555755aa7ade2717e2e",
+      "bytes": 249,
+      "sha256": "f6d0ee01982861692fcca2b7c1d65532d635409fed678c56e7e1e13a07113d71"
+    },
+    {
+      "path": "supabase/tests/run.mjs",
+      "mode": "100644",
+      "git_blob": "3c2b8892fa54f45b581e82d3d85163edc881d609",
+      "bytes": 24866,
+      "sha256": "741f346e311a9f9b697f2a4285943660fa5d49af467951a6641494c4e64557b4"
+    },
+    {
+      "path": "tsconfig.json",
+      "mode": "100644",
+      "git_blob": "6e58eea4844ee91c186f53bf144162bd0416439d",
+      "bytes": 491,
+      "sha256": "72d5a50b8ff26b3e311da6743a679e5e143cc455c13c6e8c7d80d7df6c09a011"
+    },
+    {
+      "path": "vitest.config.ts",
+      "mode": "100644",
+      "git_blob": "de999daac61cf9d6e6923178eb523b7993345557",
+      "bytes": 233,
+      "sha256": "0fbd1e3ff5cdf4236fd7e52c3d7e966ddb9ec617c1040689992b17441e82853d"
+    },
+    {
+      "path": "vitest.db.config.ts",
+      "mode": "100644",
+      "git_blob": "230f4a091eb8bbcac4e9b779819b4258203925b3",
+      "bytes": 796,
+      "sha256": "b09b8b3c2b68d523b5ade9a544a8db6f95a74331dbe6403e627c282c0f1cdb19"
+    }
+  ],
+  "git_history_bundle": {
+    "path": "docs/archive/healthloop-history.bundle",
+    "bytes": 475441,
+    "sha256": "fd0d102e9774fea135231e5a0718cf2bd5a9f2a3a548f669a65bd6b1fb41e008",
+    "git_blob": "1724bf49a6edf1af0fa6137b53958d45ca43dd19",
+    "verification": "git bundle verify passed; independent bare clone git fsck --full passed; all 7 branch refs match"
+  },
+  "remote_backup_status": "pending destination; no local cleanup authorized until verified remote upload",
+  "excluded": "Installed dependencies, generated native/build output, disposable database cluster, local env secrets and shared developer tools. Manifest and bundle are added after source_commit to avoid recursive inclusion."
+}

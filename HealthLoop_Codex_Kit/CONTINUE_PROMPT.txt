@@ -1,0 +1,3 @@
+Read AGENTS.md, MEGA_PROMPT.md, docs/IMPLEMENTATION_STATUS.md, docs/TEST_EVIDENCE.md and the current git diff. Resume HealthLoop from the next incomplete, dependency-ready requirement.
+
+Do not rebuild completed components or rewrite the project plan. Verify the previous checkpoint, implement the next coherent slice, run relevant tests and update evidence. Keep unverified native/device/wallet behavior and external approvals explicitly open. Preserve all privacy, accounting, scope and external-action restrictions in the brief.
