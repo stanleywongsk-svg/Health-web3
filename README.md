@@ -14,7 +14,7 @@ Start with the [unfinished work report](docs/UNFINISHED_REPORT.md) and [continua
 - Xcode compatible with Expo55 and CocoaPods for iOS development builds
 - Deno **2.7.1** for Edge checks
 
-Use the pinned Node in your shell before running commands. On the implementation host, system Node25 differs from the bundled Node24 used for final verification; see TEST_EVIDENCE for the explicit PATH.
+Use the pinned Node in your shell before running commands. The historical implementation host used a bundled Node24 because its system Node25 differed. On a fresh clone, install/select the pinned Node version; old host paths in TEST_EVIDENCE are historical evidence only.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -76,3 +76,7 @@ The current React Native prebuilt-core CocoaPods path rejects project paths cont
 - Offline consent recovery and reconnect behavior are implemented and tested with synthetic inputs; native device verification is still open. Full correction approvals, retention scheduling, backup replay and store acceptance remain checkpoint tasks.
 - [API](docs/API.md), [architecture](docs/ARCHITECTURE.md), [security](docs/SECURITY.md), [privacy data map](docs/PRIVACY_DATA_MAP.md), and [operations](docs/OPERATIONS.md) describe actual boundaries and release blockers.
 - Remote provisioning, publishing, production migrations and testnet broadcasts require explicit approval. Mainnet operations are outside this brief.
+
+## Source backup and continuation
+
+A verified public source backup is available at [stanleywongsk-svg/Health-web3](https://github.com/stanleywongsk-svg/Health-web3). It includes the source snapshot, original planning documents, unfinished-work report, continuation prompt and a Git bundle preserving seven local branch histories. See [backup verification](docs/GITHUB_BACKUP.md) and [restore instructions](docs/BACKUP_AND_RESTORE.md). Recreate dependencies and disposable test databases from a fresh clone; historical host paths and staging artifacts are not recovery dependencies. This backup does not establish native or real Auth/device acceptance.

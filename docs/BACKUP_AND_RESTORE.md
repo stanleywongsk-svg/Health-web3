@@ -1,6 +1,8 @@
 # Backup and restore checkpoint
 
-Status at preparation (2026-09-20): **local backup prepared; GitHub destination pending; local cleanup not performed**. An authenticated GitHub connector is available, but it cannot create a repository. The CLI and in-app browser are not signed in. The operator has been asked to create a private repository initialized with a README and provide its URL. Do not infer that a remote backup exists from this file.
+**Public source backup verified:** [https://github.com/stanleywongsk-svg/Health-web3](https://github.com/stanleywongsk-svg/Health-web3), initial complete snapshot [`38c0425`](https://github.com/stanleywongsk-svg/Health-web3/commit/38c0425e01a440727f702d356ad507d8f36cbccb). The operator explicitly approved public upload. A fresh GitHub clone matched all 138 intended paths and blob IDs; 136 source-file SHA-256 values and the downloaded history bundle matched. The downloaded bundle passed Git integrity checks and restored all seven saved branch refs. See [GITHUB_BACKUP.md](GITHUB_BACKUP.md) for the verification record and local cleanup outcome.
+
+The GitHub snapshot preserves the current source and handoff documents. The archived bundle preserves the original local branch histories; the GitHub commit graph differs because the authenticated connector uploaded a snapshot. These checks prove source preservation, not native compilation, real Auth/OTP, device acceptance or the P27 database restore drill.
 
 ## What is preserved
 
@@ -16,7 +18,7 @@ Installed dependencies, generated iOS/Android projects, derived build output, di
 
 ## Normal recovery
 
-Clone the private repository to a path without spaces, such as `~/Projects/healthloop`. Use Node24.19.0 and pnpm11.19.0, then run `pnpm install --frozen-lockfile` and follow the root README. Read `CONTINUE_PROMPT.md` before resuming implementation. Recreate environment files from the examples; do not paste secrets into chat or commit them. Recreate disposable databases using `BACKEND_NOTES.md` / `DEVICE_SETUP.md`; old `/tmp` paths are historical, not dependencies.
+Clone the public repository to a path without spaces, such as `~/Projects/healthloop`. Use Node24.19.0 and pnpm11.19.0, then run `pnpm install --frozen-lockfile` and follow the root README. Read `CONTINUE_PROMPT.md` before resuming implementation. Recreate environment files from the examples; do not paste secrets into chat or commit them. Recreate disposable databases using `BACKEND_NOTES.md` / `DEVICE_SETUP.md`; old `/tmp` paths are historical, not dependencies.
 
 To verify and restore the preserved pre-upload Git history from a fresh clone:
 
@@ -29,7 +31,7 @@ The restored repository includes the saved implementation branches as remote-tra
 
 ## Upload and cleanup gate
 
-1. Confirm the provided repository is private and belongs to the intended account. Inspect any existing contents before adding files; preserve unrelated work.
+1. Use the operator-approved public repository `stanleywongsk-svg/Health-web3`. Public upload was explicitly authorized; no other deployment, spending or chain broadcast was authorized. Inspect existing contents before adding files; preserve unrelated work.
 2. Transfer every current tracked file, including the manifest, original documents and history bundle. Prefer a normal Git push if an authenticated CLI is available; otherwise Git database APIs can create a complete snapshot while the bundle preserves original history.
 3. Include `[skip ci]` in this archival upload's commit message so the existing push/pull-request workflow does not start a possibly billable run. This does not mark CI as passed. GitHub documents this behavior at https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs . Future CI execution needs available quota or cost approval.
 4. Verify the remote branch/commit tree matches all uploaded paths and blob object IDs. Fetch the remote history bundle and verify its SHA-256 and Git integrity. Retain the immutable commit URL as evidence.

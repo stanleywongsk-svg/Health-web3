@@ -973,6 +973,13 @@
     "git_blob": "1724bf49a6edf1af0fa6137b53958d45ca43dd19",
     "verification": "git bundle verify passed; independent bare clone git fsck --full passed; all 7 branch refs match"
   },
-  "remote_backup_status": "pending destination; no local cleanup authorized until verified remote upload",
-  "excluded": "Installed dependencies, generated native/build output, disposable database cluster, local env secrets and shared developer tools. Manifest and bundle are added after source_commit to avoid recursive inclusion."
+  "remote_backup_status": "verified public upload explicitly authorized by operator",
+  "excluded": "Installed dependencies, generated native/build output, disposable database cluster, local env secrets and shared developer tools. Manifest and bundle are added after source_commit to avoid recursive inclusion.",
+  "remote_verification": {
+    "repository": "https://github.com/stanleywongsk-svg/Health-web3",
+    "initial_snapshot_commit": "38c0425e01a440727f702d356ad507d8f36cbccb",
+    "initial_snapshot_tree": "4dc233e418125aadbef639b2196581a8e40f1507",
+    "verification": "Fresh GitHub clone, full Git fsck,136 source hashes,bundle SHA256 and all7 restored branch refs passed",
+    "note": "files/source_commit describe the immutable archived checkpoint; later handoff documentation changes are preserved in subsequent GitHub commits."
+  }
 }

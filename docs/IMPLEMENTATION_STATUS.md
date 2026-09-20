@@ -86,3 +86,7 @@ The disposable PostgreSQL cluster was stopped after the final tests. No automati
 ## Archive handoff preparation — 2026-09-20
 
 The operator requested a private GitHub backup, an unfinished-work report and continuation prompt, followed by deletion of this project's local copies only after verified upload. See UNFINISHED_REPORT.md, CONTINUE_PROMPT.md and BACKUP_AND_RESTORE.md. Source and historical evidence are being preserved; GitHub destination creation is awaiting the operator because the authenticated connector cannot create repositories and CLI/browser authentication is unavailable. No upload or cleanup is claimed complete. No requirement status or human acceptance is advanced by this archive operation.
+
+## Public archive verified — 2026-09-20
+
+The operator explicitly approved public upload to `stanleywongsk-svg/Health-web3`. The initial complete remote snapshot `38c0425e01a440727f702d356ad507d8f36cbccb` was independently cloned and verified against the complete local file tree, manifest and recoverable seven-branch history bundle. This supersedes the destination-pending archive note above. See GITHUB_BACKUP.md for verification and actual cleanup status. No application acceptance status, device test, real Auth test or human review was advanced.
