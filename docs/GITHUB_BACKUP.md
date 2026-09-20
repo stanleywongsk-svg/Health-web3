@@ -11,7 +11,9 @@
 
 ## Local cleanup
 
-Pending the final handoff-document upload and verification. The operator authorized deletion of this project's local copies only after verified remote preservation. Shared tools/caches and unrelated files/processes are excluded. No cleanup is claimed by this initial record.
+Completed after remote verification. A second GitHub checkout at commit `86e7f18d1bb87ba4a7476dbb5dd3440cdbe0fee4` matched all 139 current local files byte for byte, with matching tree `59603e9ae85e9f7e5e8401cd2be8443c305068ba`, before deletion.
+
+Removed the main HealthLoop local directory, six archived worktrees, three project-only temporary build/database/extraction directories, 17 inventoried temporary files and the byte-verified archived original attachment. All 28 inventoried paths were checked absent. The removed directories accounted for approximately 821 MiB by pre-cleanup disk usage; actual free-space change may differ because of shared filesystem blocks. Shared developer tools/caches, unrelated projects and app/tool processes were preserved. No dedicated HealthLoop service was running; the disposable PostgreSQL cluster was already stopped. This operation removes disk files and does not claim a measured RAM reduction.
 
 ## Continue work
 
