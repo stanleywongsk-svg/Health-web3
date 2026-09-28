@@ -15,7 +15,7 @@ sql_paths = ["./seed.sql"]
 [studio]
 enabled = true
 port = 54323
-[inbucket]
+[local_smtp]
 enabled = true
 port = 54324
 [auth]
@@ -40,7 +40,7 @@ subject = "HealthLoop 电邮验证码"
 content_path = "./supabase/templates/otp.html"
 [functions.core]
 verify_jwt = false
-# getUser(accessToken) validates every request inside handler; this also supports
-# current asymmetric signing keys. There is no anonymous business RPC path.
+# getUser(accessToken) validates every request inside the handler, followed by
+# PostgREST JWT validation and SQL authorization. No anonymous business RPC path.
 entrypoint = "./functions/core/index.ts"
 import_map = "./functions/core/deno.json"

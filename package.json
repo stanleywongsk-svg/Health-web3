@@ -16,16 +16,22 @@
     "boundaries": "node scripts/check-boundaries.mjs",
     "mobile": "pnpm --filter @healthloop/mobile start",
     "mobile:ios": "pnpm --filter @healthloop/mobile ios",
+    "mobile:preflight": "node scripts/native-check.ts",
     "mobile:bundle": "pnpm --filter @healthloop/mobile exec expo export --platform ios --output-dir dist && node scripts/check-ios-bundle.mjs",
     "test:integration": "vitest run --config vitest.db.config.ts",
     "typecheck:edge": "deno check --config supabase/functions/core/deno.json supabase/functions/core/index.ts supabase/functions/deletion-worker/run.ts",
-    "test:edge": "deno test --config supabase/functions/core/deno.json supabase/functions/core/handler.test.ts"
+    "test:edge": "deno test --config supabase/functions/core/deno.json supabase/functions/core/handler.test.ts supabase/functions/deletion-worker/scope.test.ts",
+    "test:local": "vitest run --config vitest.local.config.ts",
+    "local:start": "node scripts/local-backend.mjs start",
+    "local:serve": "node scripts/local-backend.mjs serve",
+    "local:stop": "node scripts/local-backend.mjs stop"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/node": "24.13.5",
     "eslint": "10.10.0",
     "pg": "8.23.0",
+    "supabase": "2.117.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.70.0",
     "vitest": "4.1.11"

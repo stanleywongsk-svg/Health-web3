@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { activitySyncSchema, appealSchema, claimSchema, consentSchema } from '@healthloop/domain';
+import {
+  activitySyncSchema, appealSchema, claimSchema, consentSchema, recordCursorSchema,
+  rewardsResultSchema, redeemRewardSchema, redeemResultSchema, redemptionPageSchema, cancelRedemptionResultSchema,
+  pointsSummarySchema, ledgerPageSchema, appealPageSchema, adminReviewPageSchema,
+  proposeAppealSchema, decideAppealSchema, proposeAppealResultSchema, decideAppealResultSchema,
+  notificationPreferencesSchema, setNotificationPreferencesSchema,
+} from '@healthloop/domain';
 import { demoActivitySyncSchema } from '@healthloop/domain/synthetic';
 
 export interface CoreConfig {
@@ -46,6 +52,10 @@ const errors: Record<string, [number,string]> = {
   CLAIM_DAILY_FIRST:[409,'请先领取每日任务，周奖励会自动计算'], INSUFFICIENT_POINTS:[409,'可用积分不足'],
   OUT_OF_STOCK:[409,'演示奖励名额不足'], REAUTHENTICATION_REQUIRED:[401,'请在五分钟内重新使用电邮验证码登录'],
   RULES_UNAVAILABLE:[503,'任务规则暂不可用'], BODY_TOO_LARGE:[413,'提交内容过大'], NOT_SUPPORTED:[404,'此功能暂未提供'],
+  SELF_REVIEW:[403,'申请人与审核人必须不同，且不能审核自己的记录'],
+  APPEAL_CLOSED:[409,'此申诉已处理，请刷新记录'], SUBMISSION_NOT_REVIEWABLE:[409,'此修订没有可供审核的待核实记录'],
+  STALE_PROPOSAL:[409,'记录已更新，此提案需重新核对'], PROPOSAL_DECIDED:[409,'此提案已完成审核，请刷新记录'],
+  PREFERENCES_CONFLICT:[409,'提醒设置已更新，请刷新后再修改'],
   INTERNAL_ERROR:[500,'服务暂时不可用，请稍后再试'],
 };
 class ApiError extends Error { constructor(readonly code:string) { super(code); } }
@@ -61,8 +71,16 @@ async function jsonBody(req:Request):Promise<unknown> {
   const bytes=new Uint8Array(length); let offset=0; for(const part of parts) { bytes.set(part,offset); offset+=part.length; }
   try { return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)); } catch { throw new ApiError('INVALID_INPUT'); }
 }
-const ledgerQuery=z.strictObject({limit:z.coerce.number().int().min(1).max(100).default(20),cursor:z.string().regex(/^[1-9]\d{0,17}$/).optional()});
+const ledgerQuery=z.strictObject({limit:z.coerce.number().int().min(1).max(100).default(20),cursor:recordCursorSchema.optional()});
 const redemptionQuery=ledgerQuery;
+function queryInput(url: URL): Record<string, string> {
+  const result: Record<string, string> = Object.create(null);
+  for (const [key, value] of url.searchParams) {
+    if (Object.hasOwn(result, key)) throw new ApiError('INVALID_INPUT');
+    result[key] = value;
+  }
+  return result;
+}
 export function createCoreHandler(config:CoreConfig,deps:Dependencies):(req:Request)=>Promise<Response> {
   return async(req)=> {
     const requestId=deps.requestId?.()??crypto.randomUUID();
@@ -85,7 +103,13 @@ export function createCoreHandler(config:CoreConfig,deps:Dependencies):(req:Requ
       if(verified.error || !verified.data.user) throw new ApiError('UNAUTHENTICATED');
       const url=new URL(req.url);
       const path=url.pathname.replace(/^\/functions\/v1\/core(?=\/|$)/,'').replace(/^\/core(?=\/|$)/,'')||'/';
-      let name:string; let args:Record<string,unknown>={};
+      // Review administration is supported only by the real-mode core API. Demo
+      // submissions may retain synthetic categories; never widen the shared native
+      // response contract or return an accidental 500 for this unsupported flow.
+      const reviewRoute=(req.method==='GET' && path==='/admin/reviews')
+        || (req.method==='POST' && (path==='/admin/adjustments' || /^\/admin\/adjustments\/[^/]+\/decision$/.test(path)));
+      if(config.buildMode==='demo' && reviewRoute) throw new ApiError('NOT_SUPPORTED');
+      let name:string; let args:Record<string,unknown>={}; let resultSchema:z.ZodType|undefined;
       if(req.method==='POST' && path==='/activity/sync') {
         const input=(config.buildMode==='demo'?demoActivitySyncSchema:activitySyncSchema).parse(await jsonBody(req));
         name='hl_sync_activity'; args={p_task_date:input.taskDate,p_eligible_steps:input.eligibleSteps,p_source_category:input.sourceCategory,
@@ -93,22 +117,47 @@ export function createCoreHandler(config:CoreConfig,deps:Dependencies):(req:Requ
       } else if(req.method==='POST' && path==='/account/consents') {
         const i=consentSchema.parse(await jsonBody(req));name='hl_set_consents';args={p_adult_confirmed:i.adultConfirmed,p_local_read:i.localRead,p_cloud_sync:i.cloudSync,p_marketing:i.marketing,p_version:i.version};
       } else if(req.method==='GET' && path==='/account/consents') name='hl_consents';
+      else if(req.method==='GET' && path==='/account/notification-preferences') {
+        z.strictObject({}).parse(queryInput(url));name='hl_notification_preferences';resultSchema=notificationPreferencesSchema;
+      } else if(req.method==='POST' && path==='/account/notification-preferences') {
+        z.strictObject({}).parse(queryInput(url));const i=setNotificationPreferencesSchema.parse(await jsonBody(req));
+        name='hl_set_notification_preferences';args={p_enabled:i.enabled,p_reminder_time:i.reminderTime,p_quiet_start:i.quietStart,
+          p_quiet_end:i.quietEnd,p_timezone:i.timezone,p_expected_revision:i.expectedRevision};
+        resultSchema=notificationPreferencesSchema.refine(p=>p.enabled===i.enabled && p.reminderTime===i.reminderTime
+          && p.quietStart===i.quietStart && p.quietEnd===i.quietEnd && p.timezone===i.timezone);
+      }
       else if(req.method==='GET' && path==='/health/summary') name='hl_health_summary';
       else if(req.method==='GET' && path==='/missions') name='hl_missions';
-      else if(req.method==='GET' && path==='/points/summary') name='hl_points_summary';
+      else if(req.method==='GET' && path==='/points/summary') { name='hl_points_summary';resultSchema=pointsSummarySchema; }
       else if(req.method==='GET' && path==='/points/ledger') {
-        const i=ledgerQuery.parse(Object.fromEntries(url.searchParams));name='hl_ledger';args={p_limit:i.limit,p_cursor:i.cursor??null};
+        const i=ledgerQuery.parse(queryInput(url));name='hl_ledger';args={p_limit:i.limit,p_cursor:i.cursor??null};resultSchema=ledgerPageSchema;
       } else if(req.method==='POST' && /^\/missions\/[^/]+\/claim$/.test(path)) {
         const id=z.uuid().parse(path.split('/')[2]); const i=claimSchema.parse(await jsonBody(req));name='hl_claim';args={p_instance_id:id,p_idempotency_key:i.idempotencyKey};
-      } else if(req.method==='GET' && path==='/rewards') name='hl_rewards';
+      } else if(req.method==='GET' && path==='/rewards') {
+        z.strictObject({}).parse(queryInput(url));name='hl_rewards';resultSchema=rewardsResultSchema;
+      }
       else if(req.method==='GET' && path==='/redemptions') {
-        const i=redemptionQuery.parse(Object.fromEntries(url.searchParams));name='hl_redemptions';args={p_limit:i.limit,p_cursor:i.cursor??null};
+        const i=redemptionQuery.parse(queryInput(url));name='hl_redemptions';args={p_limit:i.limit,p_cursor:i.cursor??null};resultSchema=redemptionPageSchema;
       } else if(req.method==='POST' && path==='/redemptions') {
-        const i=z.strictObject({rewardId:z.uuid(),idempotencyKey:z.uuid()}).parse(await jsonBody(req));name='hl_redeem';args={p_reward_id:i.rewardId,p_idempotency_key:i.idempotencyKey};
+        const i=redeemRewardSchema.parse(await jsonBody(req));name='hl_redeem';args={p_reward_id:i.rewardId,p_idempotency_key:i.idempotencyKey};resultSchema=redeemResultSchema;
       } else if(req.method==='POST' && /^\/redemptions\/[^/]+\/cancel$/.test(path)) {
-        const id=z.uuid().parse(path.split('/')[2]);z.strictObject({}).parse(await jsonBody(req));name='hl_cancel_redemption';args={p_redemption_id:id};
+        const id=z.uuid().parse(path.split('/')[2]);z.strictObject({}).parse(await jsonBody(req));name='hl_cancel_redemption';args={p_redemption_id:id};resultSchema=cancelRedemptionResultSchema;
       } else if(req.method==='POST' && path==='/appeals') {
         const i=appealSchema.parse(await jsonBody(req));name='hl_create_appeal';args={p_task_date:i.taskDate,p_reason:i.reason};
+      } else if(req.method==='GET' && path==='/appeals') {
+        const i=ledgerQuery.parse(queryInput(url));name='hl_appeals';args={p_limit:i.limit,p_cursor:i.cursor??null};resultSchema=appealPageSchema;
+      } else if(req.method==='GET' && path==='/admin/reviews') {
+        const i=ledgerQuery.parse(queryInput(url));name='hl_admin_appeals';args={p_limit:i.limit,p_cursor:i.cursor??null};resultSchema=adminReviewPageSchema;
+      } else if(req.method==='POST' && path==='/admin/adjustments') {
+        z.strictObject({}).parse(queryInput(url));
+        const i=proposeAppealSchema.parse(await jsonBody(req));name='hl_propose_appeal';
+        args={p_appeal_id:i.appealId,p_revision:i.revision,p_reason:i.reason,p_idempotency_key:i.idempotencyKey};
+        resultSchema=proposeAppealResultSchema.refine(r=>r.appealId.toLowerCase()===i.appealId.toLowerCase() && r.revision===i.revision);
+      } else if(req.method==='POST' && /^\/admin\/adjustments\/[^/]+\/decision$/.test(path)) {
+        z.strictObject({}).parse(queryInput(url));
+        const id=z.uuid().parse(path.split('/')[3]);const i=decideAppealSchema.parse(await jsonBody(req));name='hl_decide_appeal';
+        args={p_proposal_id:id,p_decision:i.decision,p_reason:i.reason,p_idempotency_key:i.idempotencyKey};
+        resultSchema=decideAppealResultSchema.refine(r=>r.id.toLowerCase()===id.toLowerCase() && r.decision===i.decision);
       } else if(req.method==='POST' && path==='/account/export') { z.strictObject({}).parse(await jsonBody(req)); name='hl_export'; }
       else if(req.method==='DELETE' && path==='/account') { z.strictObject({}).parse(await jsonBody(req)); name='hl_request_deletion'; }
       else if(req.method==='POST' && path==='/admin/reward-pause') {
@@ -116,7 +165,10 @@ export function createCoreHandler(config:CoreConfig,deps:Dependencies):(req:Requ
       } else throw new ApiError('NOT_SUPPORTED');
       const result=await client.rpc(name,args);
       if(result.error) throw new ApiError(errors[result.error.message]?result.error.message:'INTERNAL_ERROR');
-      return new Response(JSON.stringify({data:result.data,requestId}),{status:200,headers});
+      const checked=resultSchema?.safeParse(result.data);
+      // A malformed RPC result is a server failure, never client validation failure or a partial success.
+      if(checked && !checked.success) throw new ApiError('INTERNAL_ERROR');
+      return new Response(JSON.stringify({data:checked?.data??result.data,requestId}),{status:200,headers});
     } catch(e) {
       if(e instanceof z.ZodError) return failure('INVALID_INPUT');
       if(e instanceof ApiError) return failure(e.code);

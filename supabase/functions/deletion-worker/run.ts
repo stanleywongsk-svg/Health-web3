@@ -1,16 +1,18 @@
 /** Trusted operator job; never bundle into mobile/browser, never expose as a public route. */
 import { createClient } from '@supabase/supabase-js';
 import { loadConfig } from '../core/handler.ts';
+import { deletionJobScope, scopedDeletionJobs } from './scope.ts';
 const config=loadConfig((key)=>Deno.env.get(key));
+const scope=deletionJobScope(Deno.env.get('HEALTHLOOP_DELETION_JOB_IDS'));
 const serviceKey=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 if(!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY must be securely configured for the worker.');
 const client=createClient(config.url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
 const {data:jobs,error}=await client.rpc('hl_deletion_jobs');
 if(error) throw new Error('Deletion queue could not be read.');
 if(!Array.isArray(jobs)) throw new Error('Unexpected deletion queue response.');
+if(jobs.some(job=>!job || typeof job.id!=='string'||typeof job.user_id!=='string')) throw new Error('Invalid deletion job.');
 let completed=0;
-for(const job of jobs) {
-  if(typeof job.id!=='string'||typeof job.user_id!=='string') throw new Error('Invalid deletion job.');
+for(const job of scopedDeletionJobs(jobs,scope)) {
   const purge=await client.rpc('hl_purge_deletion',{p_job_id:job.id});
   if(purge.error) throw new Error('Core purge failed; job remains pending for retry.');
   const removed=await client.auth.admin.deleteUser(job.user_id);

@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
+import { runAppealAdjustmentTests } from './appeal-adjustments.mjs';
+import { runNotificationPreferenceTests } from './notification-preferences.mjs';
 const target = process.env.HEALTHLOOP_TEST_DATABASE_URL;
 if (!target) throw new Error('Set HEALTHLOOP_TEST_DATABASE_URL to a disposable local healthloop_test_* database.');
 const url = new URL(target);
@@ -303,7 +305,9 @@ try {
     assert.equal((await sync(u,3000,1,'2026-09-14',{category:'synthetic_demo',policy:'synthetic-demo-v1'})).status,'accepted');
     await admin.query("update private.system_settings set demo_mode=false,project_label='healthloop-real-unconfigured'");
   });
-  console.log(`\n${passed} PostgreSQL integration checks passed; 100-way concurrent claims executed twice.`);
+  await runAppealAdjustmentTests({ admin,pool,rpc,session,user,clock,sync,check,rejected });
+  await runNotificationPreferenceTests({ admin,pool,rpc,session,user,clock,sync,check,rejected });
+  console.log(`\n${passed} PostgreSQL integration checks passed; 100-way concurrent claims executed twice, approval replay and preference retry once each.`);
   console.log('Auth JWT claims were injected by the privileged test fixture; this does not verify Supabase Auth/OTP or Edge network delivery.');
 } finally {
   await admin.query("create or replace function private.server_now() returns timestamptz language sql volatile set search_path='' as $$ select clock_timestamp(); $$");

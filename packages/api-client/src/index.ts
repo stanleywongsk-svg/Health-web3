@@ -1,5 +1,19 @@
 import { z } from 'zod';
-import { activitySyncSchema, claimSchema, consentSchema, appealSchema, type ActivitySyncInput } from '@healthloop/domain';
+import {
+  activitySyncSchema, claimSchema, consentSchema, appealSchema, recordPageSchema,
+  rewardsResultSchema, redeemRewardSchema, redeemResultSchema, redemptionPageSchema, cancelRedemptionResultSchema,
+  pointsSummarySchema, ledgerPageSchema, appealPageSchema, adminReviewPageSchema, appealAdjustmentExportSchema,
+  proposeAppealSchema, decideAppealSchema, proposeAppealResultSchema, decideAppealResultSchema,
+  notificationPreferencesSchema, setNotificationPreferencesSchema,
+  type ActivitySyncInput, type RecordPageInput, type RedeemRewardInput, type ProposeAppealInput, type DecideAppealInput, type AppealAdjustmentExport,
+  type NotificationPreferences, type NotificationPreferencesInput,
+} from '@healthloop/domain';
+export type {
+  Reward, Redemption, RedemptionPage, RedeemResult, CancelRedemptionResult, RecordPageInput, RedeemRewardInput,
+  PointsSummary, LedgerEntry, LedgerPage, Appeal, AppealPage, AppealProposal, AppealAdjustmentExport, AdminReview, AdminReviewPage,
+  ProposeAppealInput, DecideAppealInput, ProposeAppealResult, DecideAppealResult,
+  NotificationPreferences, NotificationPreferencesInput,
+} from '@healthloop/domain';
 
 export class CoreApiError extends Error {
   constructor(public readonly code: string, public readonly status: number, public readonly requestId?: string) {
@@ -9,18 +23,19 @@ export class CoreApiError extends Error {
 const profileSchema = z.object({ id: z.string(), status: z.string(), adultConfirmed: z.boolean(), localRead: z.boolean(), cloudSync: z.boolean(), marketing: z.boolean(), consentVersion: z.string().nullable() });
 const consentsSchema = z.object({ profile: profileSchema.nullable() });
 const missionSchema = z.object({ id: z.string(), kind: z.enum(['daily_steps', 'weekly_consistency']), periodStart: z.string(), ruleVersion: z.string(), selectedGoal: z.number(), awardedPoints: z.number(), eligibleSteps: z.number().nullable(), cutoffAt: z.string(), tiers: z.array(z.object({ steps: z.number(), points: z.number() })), weeklyDaysRequired: z.number(), weeklyBonusPoints: z.number() });
-const pointsSchema = z.object({ availablePoints: z.number(), pendingEvaluations: z.number(), earnedPoints: z.number(), spentPoints: z.number(), reversedPoints: z.number() });
-const ledgerSchema = z.object({ items: z.array(z.object({ id: z.string(), kind: z.enum(['daily_award', 'weekly_award', 'redemption', 'refund']), points: z.number(), createdAt: z.string(), instanceId: z.string().nullable() })), nextCursor: z.string().nullable() });
 const claimResultSchema = z.object({ instanceId: z.string(), addedPoints: z.number(), dailyAwardedPoints: z.number(), weeklyAwardedPoints: z.number(), balance: z.number() });
 const healthSummarySchema = z.object({ items: z.array(z.object({ taskDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), eligibleSteps: z.number().int().nonnegative(), sourceCategory: z.enum(['apple_phone', 'apple_watch']), revision: z.number().int().positive(), observedAt: z.string(), receivedAt: z.string(), timezone: z.literal('Asia/Hong_Kong') })) });
 export type HealthSummary = z.infer<typeof healthSummarySchema>;
 export type ConsentInput = z.infer<typeof consentSchema>;
 export type ConsentState = z.infer<typeof consentsSchema>;
 export type Mission = z.infer<typeof missionSchema>;
-export type PointsSummary = z.infer<typeof pointsSchema>;
-export type LedgerPage = z.infer<typeof ledgerSchema>;
 export type ClaimResult = z.infer<typeof claimResultSchema>;
-export type AccountExport = { exportedAt: string; profile: unknown; consentEvents: unknown[]; activitySummaries: unknown[]; activityRevisions: unknown[]; missions: unknown[]; ledger: unknown[]; appeals: unknown[]; redemptions: unknown[] };
+export type AccountExport = { exportedAt: string; profile: unknown; consentEvents: unknown[]; activitySummaries: unknown[]; activityRevisions: unknown[]; missions: unknown[]; ledger: unknown[]; appeals: unknown[]; appealAdjustments: AppealAdjustmentExport[]; redemptions: unknown[]; notificationPreferences: NotificationPreferences };
+
+function pageQuery(page: RecordPageInput): string {
+  const { limit, cursor } = recordPageSchema.parse(page);
+  return `?limit=${limit}${cursor === undefined ? '' : `&cursor=${cursor}`}`;
+}
 
 export function createCoreClient(options: { baseUrl: string; accessToken: () => Promise<string | null>; fetch?: typeof fetch; allowLocalDevelopment?: boolean; timeoutMs?: number }) {
   const url = new URL(options.baseUrl);
@@ -91,19 +106,36 @@ export function createCoreClient(options: { baseUrl: string; accessToken: () => 
   return {
     getConsents: (signal?: AbortSignal) => request('/account/consents', 'GET', consentsSchema, undefined, signal),
     setConsents: (input: ConsentInput, signal?: AbortSignal) => request('/account/consents', 'POST', consentsSchema, consentSchema.parse(input), signal),
+    getNotificationPreferences: (signal?: AbortSignal) => request('/account/notification-preferences', 'GET', notificationPreferencesSchema, undefined, signal),
+    setNotificationPreferences: (input: NotificationPreferencesInput, signal?: AbortSignal) => {
+      const body = setNotificationPreferencesSchema.parse(input);
+      const resultSchema = notificationPreferencesSchema.refine(p => p.enabled === body.enabled && p.reminderTime === body.reminderTime
+        && p.quietStart === body.quietStart && p.quietEnd === body.quietEnd && p.timezone === body.timezone);
+      return request('/account/notification-preferences', 'POST', resultSchema, body, signal);
+    },
     syncActivity: (input: ActivitySyncInput, signal?: AbortSignal) => request('/activity/sync', 'POST', z.object({ instanceId: z.string(), taskDate: z.string(), eligibleSteps: z.number().nullable(), status: z.enum(['accepted', 'pending_review']), revision: z.number(), sourceCategory: z.string(), ruleVersion: z.string() }), activitySyncSchema.parse(input), signal),
     getHealthSummary: (signal?: AbortSignal) => request('/health/summary', 'GET', healthSummarySchema, undefined, signal),
     getMissions: (signal?: AbortSignal) => request('/missions', 'GET', z.object({ items: z.array(missionSchema) }), undefined, signal),
     claimMission: (instanceId: string, idempotencyKey: string, signal?: AbortSignal) => request(`/missions/${z.uuid().parse(instanceId)}/claim`, 'POST', claimResultSchema, claimSchema.parse({ idempotencyKey }), signal),
-    getPointsSummary: (signal?: AbortSignal) => request('/points/summary', 'GET', pointsSchema, undefined, signal),
-    getLedger: (page: { limit?: number; cursor?: string } = {}, signal?: AbortSignal) => {
-      const limit = z.number().int().min(1).max(100).parse(page.limit ?? 20);
-      const cursor = page.cursor === undefined ? '' : `&cursor=${z.string().regex(/^\d+$/).parse(page.cursor)}`;
-      return request(`/points/ledger?limit=${limit}${cursor}`, 'GET', ledgerSchema, undefined, signal);
-    },
-    exportAccount: (signal?: AbortSignal) => request('/account/export', 'POST', z.object({ exportedAt: z.string(), profile: z.unknown(), consentEvents: z.array(z.unknown()), activitySummaries: z.array(z.unknown()), activityRevisions: z.array(z.unknown()), missions: z.array(z.unknown()), ledger: z.array(z.unknown()), appeals: z.array(z.unknown()), redemptions: z.array(z.unknown()) }), {}, signal),
+    getPointsSummary: (signal?: AbortSignal) => request('/points/summary', 'GET', pointsSummarySchema, undefined, signal),
+    getLedger: (page: RecordPageInput = {}, signal?: AbortSignal) => request(`/points/ledger${pageQuery(page)}`, 'GET', ledgerPageSchema, undefined, signal),
+    getRewards: (signal?: AbortSignal) => request('/rewards', 'GET', rewardsResultSchema, undefined, signal),
+    getRedemptions: (page: RecordPageInput = {}, signal?: AbortSignal) => request(`/redemptions${pageQuery(page)}`, 'GET', redemptionPageSchema, undefined, signal),
+    redeemReward: (input: RedeemRewardInput, signal?: AbortSignal) => request('/redemptions', 'POST', redeemResultSchema, redeemRewardSchema.parse(input), signal),
+    cancelRedemption: (id: string, signal?: AbortSignal) => request(`/redemptions/${z.uuid().parse(id)}/cancel`, 'POST', cancelRedemptionResultSchema, {}, signal),
+    exportAccount: (signal?: AbortSignal) => request('/account/export', 'POST', z.object({ exportedAt: z.string(), profile: z.unknown(), consentEvents: z.array(z.unknown()), activitySummaries: z.array(z.unknown()), activityRevisions: z.array(z.unknown()), missions: z.array(z.unknown()), ledger: z.array(z.unknown()), appeals: z.array(z.unknown()), appealAdjustments: z.array(appealAdjustmentExportSchema), redemptions: z.array(z.unknown()), notificationPreferences: notificationPreferencesSchema }), {}, signal),
     deleteAccount: (signal?: AbortSignal) => request('/account', 'DELETE', z.object({ jobId: z.string(), status: z.literal('deletion_requested') }), {}, signal),
     createAppeal: (input: z.infer<typeof appealSchema>, signal?: AbortSignal) => request('/appeals', 'POST', z.object({ id: z.string(), status: z.literal('open') }), appealSchema.parse(input), signal),
+    getAppeals: (page: RecordPageInput = {}, signal?: AbortSignal) => request(`/appeals${pageQuery(page)}`, 'GET', appealPageSchema, undefined, signal),
+    getAdminReviews: (page: RecordPageInput = {}, signal?: AbortSignal) => request(`/admin/reviews${pageQuery(page)}`, 'GET', adminReviewPageSchema, undefined, signal),
+    proposeAppeal: (input: ProposeAppealInput, signal?: AbortSignal) => {
+      const body = proposeAppealSchema.parse(input);
+      return request('/admin/adjustments', 'POST', proposeAppealResultSchema.refine((r) => r.appealId.toLowerCase() === body.appealId.toLowerCase() && r.revision === body.revision), body, signal);
+    },
+    decideAppeal: (id: string, input: DecideAppealInput, signal?: AbortSignal) => {
+      const proposalId = z.uuid().parse(id); const body = decideAppealSchema.parse(input);
+      return request(`/admin/adjustments/${proposalId}/decision`, 'POST', decideAppealResultSchema.refine((r) => r.id.toLowerCase() === proposalId.toLowerCase() && r.decision === body.decision), body, signal);
+    },
   };
 }
 export type CoreClient = ReturnType<typeof createCoreClient>;

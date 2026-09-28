@@ -3,8 +3,11 @@ import { AppState, Share } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import * as Crypto from 'expo-crypto';
 import { aggregateSteps, summarizeSleep, type StepAggregation, type SourcePin, type MetricResult, type SleepSummary, type HeartRateSample } from '@healthloop/health-provider';
-import { CoreApiError, type Mission, type PointsSummary, type LedgerPage } from '@healthloop/api-client';
-import { runAccountSequence } from '../utils/account-sequence';
+import { CoreApiError, type Mission, type PointsSummary, type LedgerPage, type AppealPage } from '@healthloop/api-client';
+import { runDeletionSequence } from '../utils/account-sequence';
+import { RewardController, type RewardCanonical } from '../utils/reward-controller';
+import { ReminderController, type ReminderChoices } from '../utils/reminder-controller';
+import { reminderDriver } from './reminders';
 import { ConsentGate } from '../utils/consent-gate';
 import { ConsentController, consentErrorCode } from '../utils/consent-controller';
 import { createActivitySyncCoordinator, latestEligibleObservation, prepareActivitySummary, type ActivitySyncResult } from '../utils/activity-sync';
@@ -19,6 +22,10 @@ export interface DayView { date: string; steps: StepAggregation; observedAt: str
 export function useHealthLoop(runtime: Runtime) {
   const authority=useMemo(()=>new ConsentController({api:runtime.api,storage:secureStorage}),[runtime]);
   const coordinator=useMemo(()=>createActivitySyncCoordinator({api:runtime.api,randomUUID:()=>Crypto.randomUUID()}),[runtime]);
+  const rewardController=useMemo(()=>new RewardController({api:runtime.api,storage:secureStorage,randomUUID:()=>Crypto.randomUUID()}),[runtime]);
+  const reminderController=useMemo(()=>new ReminderController({api:runtime.api,storage:secureStorage,driver:reminderDriver}),[runtime]);
+  const reminderState=useSyncExternalStore(reminderController.subscribe,reminderController.getSnapshot,reminderController.getSnapshot);
+  const rewardState=useSyncExternalStore(rewardController.subscribe,rewardController.getSnapshot,rewardController.getSnapshot);
   const consentState=useSyncExternalStore(authority.subscribe,authority.getSnapshot,authority.getSnapshot);
   const [session,setSession]=useState<Session|null>(null);
   const [loading,setLoading]=useState(true);
@@ -30,6 +37,7 @@ export function useHealthLoop(runtime: Runtime) {
   const [missions,setMissions]=useState<Mission[]>([]);
   const [points,setPoints]=useState<PointsSummary|null>(null);
   const [ledger,setLedger]=useState<LedgerPage>({items:[],nextCursor:null});
+  const [appeals,setAppeals]=useState<AppealPage>({items:[],nextCursor:null});
   const [sleep,setSleep]=useState<MetricResult<SleepSummary>>({status:'no_data'});
   const [sleepSources,setSleepSources]=useState<string[]>([]);
   const [heartSources,setHeartSources]=useState<string[]>([]);
@@ -45,33 +53,35 @@ export function useHealthLoop(runtime: Runtime) {
   const signingOut=useRef(false);
   const [lastCodeAt,setLastCodeAt]=useState(0);
   const clearHealth=()=>{health.cancel();setDays([]);setUpdated(null);setSleep({status:'no_data'});setHeart({status:'no_data'});setSleepSources([]);setHeartSources([]);health.clearSourceLabels()};
-  const clearTransient=()=>{accountEpoch.current++;for(const request of accountRequests.current)request.abort();accountRequests.current.clear();gate.cancel();clearHealth();setBusy(false);setPoints(null);setMissions([]);setLedger({items:[],nextCursor:null});setPendingDates([]);setAdult(false);setMessage('')};
+  const clearTransient=()=>{accountEpoch.current++;for(const request of accountRequests.current)request.abort();accountRequests.current.clear();gate.cancel();clearHealth();setBusy(false);setPoints(null);setMissions([]);setLedger({items:[],nextCursor:null});setAppeals({items:[],nextCursor:null});setPendingDates([]);setAdult(false);setMessage('')};
   useEffect(()=>{
     const update=()=>{
       const state=authority.getSnapshot();gate.configure(state.accountId,state.localAllowed,state.cloudAllowed);
+      rewardController.setContext({accountId:state.accountId,verified:state.connection==='online'&&state.onboarded,redeemAllowed:state.cloudAllowed});
+      reminderController.setContext(state.accountId,state.connection==='online'&&state.onboarded);
       if(!state.localAllowed)clearHealth();
       if(!state.accountId||state.connection==='blocked'||!state.localAllowed||!state.draft.cloudSync){coordinator.setContext({accountId:state.accountId,cloudSync:false});setPendingDates([])}
       else if(state.connection!=='online')coordinator.pause();
       else coordinator.setContext({accountId:state.accountId,cloudSync:state.cloudAllowed});
       if(state.connection!=='online')for(const request of accountRequests.current)request.abort();
-      if(state.connection==='blocked'||state.connection==='signed_out'){setPoints(null);setMissions([]);setLedger({items:[],nextCursor:null})}
+      if(state.connection==='blocked'||state.connection==='signed_out'){setPoints(null);setMissions([]);setLedger({items:[],nextCursor:null});setAppeals({items:[],nextCursor:null})}
       if(state.onboarded)setAdult(true);
     };
     update();return authority.subscribe(update);
-  },[authority,coordinator,gate]);
+  },[authority,coordinator,rewardController,reminderController,gate]);
   useEffect(()=>{
     let active=true;let authEventObserved=false;
     const accept=(next:Session|null)=>{if(!active||(signingOut.current&&next))return;if(account.current!==(next?.user.id??null)){clearTransient();account.current=next?.user.id??null;authority.setAccount(account.current)}setSession(next);setLoading(false)};
     runtime.auth.auth.getSession().then(({data,error})=>{if(!authEventObserved){if(error){setMessage(t('sessionExpired'));accept(null)}else accept(data.session)}}).catch(()=>{if(active&&!authEventObserved){setMessage(t('sessionExpired'));accept(null)}});
     const {data}=runtime.auth.auth.onAuthStateChange((_event,next)=>{authEventObserved=true;accept(next)});
     const subscription=AppState.addEventListener('change',state=>{if(state==='active')runtime.auth.auth.startAutoRefresh();else runtime.auth.auth.stopAutoRefresh()});
-    return()=>{active=false;data.subscription.unsubscribe();subscription.remove();authority.setAccount(null);gate.cancel();health.cancel();coordinator.setContext({accountId:null,cloudSync:false});runtime.auth.auth.stopAutoRefresh()};
-  },[runtime,authority,coordinator,gate]);
+    return()=>{active=false;data.subscription.unsubscribe();subscription.remove();authority.setAccount(null);gate.cancel();health.cancel();coordinator.setContext({accountId:null,cloudSync:false});rewardController.setContext({accountId:null,verified:false,redeemAllowed:false});reminderController.setContext(null,false);runtime.auth.auth.stopAutoRefresh()};
+  },[runtime,authority,coordinator,rewardController,reminderController,gate]);
   const requireOnline=()=>{if(authority.getSnapshot().connection!=='online')throw new CoreApiError('RECONNECT_REQUIRED',0)};
   const reloadServer=async(signal?:AbortSignal)=>{
     requireOnline();const id=account.current;const epoch=accountEpoch.current;
-    const [m,p,l]=await Promise.all([runtime.api.getMissions(signal),runtime.api.getPointsSummary(signal),runtime.api.getLedger({},signal)]);
-    if(id===account.current&&epoch===accountEpoch.current&&!signal?.aborted&&authority.getSnapshot().connection==='online'){setMissions(m.items);setPoints(p);setLedger(l)}
+    const [m,rewards,a]=await Promise.all([runtime.api.getMissions(signal),rewardController.refresh(signal),runtime.api.getAppeals({},signal)]);
+    if(id===account.current&&epoch===accountEpoch.current&&!signal?.aborted&&authority.getSnapshot().connection==='online'){setMissions(m.items);setPoints(rewards.points);setLedger(rewards.ledger);setAppeals(a);await reminderController.refresh()}
   };
   const act=async(action:()=>Promise<void>,fallback=t('error'))=>{
     const id=account.current;const epoch=accountEpoch.current;setBusy(true);setMessage('');
@@ -114,7 +124,7 @@ export function useHealthLoop(runtime: Runtime) {
     }finally{operation.finish();readRunning.current=false}
   };
   const refreshHealth=(request=false)=>act(()=>readHealth(request),t('queryError'));
-  const applyCanonical=(result:ActivitySyncResult)=>{setMissions(result.missions);setPoints(result.points);setLedger(result.ledger);setMessage(result.status==='pending_review'?t('pendingReview'):t('syncDone'))};
+  const applyCanonical=(result:ActivitySyncResult)=>{rewardController.updateAccounting(result.points,result.ledger);setMissions(result.missions);setPoints(result.points);setLedger(result.ledger);setMessage(result.status==='pending_review'?t('pendingReview'):t('syncDone'))};
   const recentTaskDates=()=>[taskDate(),taskDate(new Date(Date.now()-86400000))];
   const syncDate=(date:string)=>act(async()=>{
     if(submissionRunning.current)return;const operation=gate.begin(true);const id=account.current;submissionRunning.current=true;
@@ -144,7 +154,8 @@ export function useHealthLoop(runtime: Runtime) {
   });
   const logout=async()=>{
     signingOut.current=true;clearTransient();account.current=null;authority.setAccount(null);setSession(null);setBusy(true);
-    try{const {error}=await runtime.auth.auth.signOut({scope:'local'});if(error)throw error;setLogoutPending(false);signingOut.current=false}
+    let reminderStopFailed=false;try{await reminderController.stop()}catch{reminderStopFailed=true}
+    try{const {error}=await runtime.auth.auth.signOut({scope:'local'});if(error)throw error;setLogoutPending(false);signingOut.current=false;if(reminderStopFailed)setMessage(t('reminderScheduleError'))}
     catch{setLogoutPending(true);setMessage(t('logoutFailed'))}
     finally{setBusy(false)}
   };
@@ -153,24 +164,39 @@ export function useHealthLoop(runtime: Runtime) {
     requireOnline();if(!session?.user.email)throw new CoreApiError('UNAUTHENTICATED',401);
     const id=account.current;const epoch=accountEpoch.current;const email=session.user.email;
     const isCurrent=()=>id===account.current&&epoch===accountEpoch.current;
-    await runAccountSequence([
-      async()=>{const {error}=await runtime.auth.auth.verifyOtp({email,token:code.trim(),type:'email'});if(error)throw error},
-      ()=>authority.change('localRead',false),
-      ()=>authority.change('cloudSync',false),
-      ()=>serverAction(signal=>runtime.api.deleteAccount(signal).then(()=>undefined)),
-    ],isCurrent);
+    const {reminderStopFailed}=await runDeletionSequence({
+      reauthenticate:async()=>{const {error}=await runtime.auth.auth.verifyOtp({email,token:code.trim(),type:'email'});if(error)throw error},
+      stopReminders:()=>reminderController.change({enabled:false}),
+      withdrawLocal:()=>authority.change('localRead',false),
+      withdrawCloud:()=>authority.change('cloudSync',false),
+      deleteRemote:()=>serverAction(signal=>runtime.api.deleteAccount(signal).then(()=>undefined)),
+    },isCurrent);
     // The remote deletion is confirmed for A. A late response cannot clear/sign out B.
     if(!isCurrent())return;
     signingOut.current=true;let cleanupFailed=false;
     try{
       const {error}=await runtime.auth.auth.signOut({scope:'local'});if(error)throw error;
       if(isCurrent()){clearTransient();account.current=null;authority.setAccount(null);setSession(null)}
-      if(account.current===null){setLogoutPending(false);setMessage(t('deleteDone'))}
+      if(account.current===null){setLogoutPending(false);setMessage(reminderStopFailed?`${t('deleteDone')} ${t('reminderScheduleError')}`:t('deleteDone'))}
     }catch{cleanupFailed=true;if(isCurrent()){clearTransient();account.current=null;authority.setAccount(null);setSession(null);setLogoutPending(true);setMessage(t('logoutFailed'))}}
     finally{if(!cleanupFailed)signingOut.current=false}
   },t('authError'));
-  const appeal=(reason:string,date:string)=>act(()=>serverAction(async signal=>{await runtime.api.createAppeal({reason,taskDate:date},signal);if(!signal.aborted)setMessage(t('correctionSent'))}));
+  const appeal=(reason:string,date:string)=>act(()=>serverAction(async signal=>{await runtime.api.createAppeal({reason,taskDate:date},signal);if(!signal.aborted){setMessage(t('correctionSent'));const page=await runtime.api.getAppeals({},signal);if(!signal.aborted)setAppeals(page)}}));
   const loadMore=()=>act(()=>serverAction(async signal=>{if(!ledger.nextCursor)return;const next=await runtime.api.getLedger({cursor:ledger.nextCursor},signal);if(!signal.aborted)setLedger({items:[...ledger.items,...next.items],nextCursor:next.nextCursor})}));
-  return {session,loading,consented:consentState.onboarded,adult,setAdult,consent:consentState.draft,connection:consentState.connection,localAllowed:consentState.localAllowed,cloudReady:consentState.cloudAllowed,busy,message,days,updated,missions,points,ledger,sleep,heart,sleepSources,heartSources,pendingDates,logoutPending,sendCode,verify,changeConsent,saveConsent,refreshHealth,sync:()=>syncDate(taskDate()),syncDate,reconnect,optionalRead,logout,exportData,deleteAccount,appeal,loadMore,reload:()=>act(()=>serverAction(reloadServer),t('noNetwork'))};
+  const rewardAction=(expectedAccountId:string,action:(signal:AbortSignal)=>Promise<RewardCanonical>,success:'rewardConfirmed'|'refundConfirmed')=>{
+    // Alert callbacks retain the account that opened the confirmation sheet.
+    if(expectedAccountId!==account.current)return Promise.resolve();
+    return act(()=>serverAction(async signal=>{const epoch=accountEpoch.current;const result=await action(signal);if(!signal.aborted&&expectedAccountId===account.current&&epoch===accountEpoch.current){setPoints(result.points);setLedger(result.ledger);setMessage(t(success))}}));
+  };
+  const redeemReward=(id:string,expectedAccountId:string)=>rewardAction(expectedAccountId,signal=>rewardController.redeem(id,signal),'rewardConfirmed');
+  const cancelReward=(id:string,expectedAccountId:string)=>rewardAction(expectedAccountId,signal=>rewardController.cancel(id,signal),'refundConfirmed');
+  const retryReward=()=>{const id=account.current;if(!id)return Promise.resolve();return rewardAction(id,signal=>rewardController.retry(signal),rewardState.pending?.kind==='cancel'?'refundConfirmed':'rewardConfirmed')};
+  const loadMoreRedemptions=()=>act(()=>serverAction(signal=>rewardController.loadMore(signal)));
+  const loadMoreAppeals=()=>act(()=>serverAction(async signal=>{const cursor=appeals.nextCursor;if(!cursor)return;const page=await runtime.api.getAppeals({cursor},signal);if(!signal.aborted)setAppeals(previous=>({items:[...new Map([...previous.items,...page.items].map(item=>[item.id,item])).values()],nextCursor:page.nextCursor}))}));
+  const changeReminder=(patch:Partial<ReminderChoices>)=>{void act(()=>reminderController.change(patch),t('reminderStateError'))};
+  const saveReminder=()=>act(async()=>{await reminderController.save();setMessage(t('reminderSaved'))});
+  const reloadReminder=()=>act(()=>reminderController.reload());
+  const reminderSettingsFailed=()=>setMessage(t('reminderScheduleError'));
+  return {reminderState,changeReminder,saveReminder,reloadReminder,reminderSettingsFailed,session,loading,consented:consentState.onboarded,adult,setAdult,consent:consentState.draft,connection:consentState.connection,localAllowed:consentState.localAllowed,cloudReady:consentState.cloudAllowed,busy,message,days,updated,missions,points,ledger,rewardState,appeals,redeemReward,cancelReward,retryReward,loadMoreRedemptions,loadMoreAppeals,sleep,heart,sleepSources,heartSources,pendingDates,logoutPending,sendCode,verify,changeConsent,saveConsent,refreshHealth,sync:()=>syncDate(taskDate()),syncDate,reconnect,optionalRead,logout,exportData,deleteAccount,appeal,loadMore,reload:()=>act(()=>serverAction(reloadServer),t('noNetwork'))};
 }
 export type HealthLoopState=ReturnType<typeof useHealthLoop>;

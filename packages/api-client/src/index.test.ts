@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { CoreApiError, createCoreClient } from './index';
 const baseUrl = 'http://127.0.0.1:54321/functions/v1/core';
-const points = { availablePoints: 10, pendingEvaluations: 0, earnedPoints: 10, spentPoints: 0, reversedPoints: 0 };
+const points = { balance: 10, availablePoints: 10, pendingEvaluations: 0, earnedPoints: 10, spentPoints: 0, reversedPoints: 0, correctionPoints: 0 };
 describe('authenticated core transport', () => {
   it('fails before sending without identity', async () => {
     const send = vi.fn();
@@ -48,7 +48,7 @@ describe('authenticated core transport', () => {
     expect(() => createCoreClient({ baseUrl: 'http://10.evil.invalid', accessToken: async () => null, allowLocalDevelopment: true })).toThrow();
   });
   it('preserves submitted revision history in account exports', async () => {
-    const exported = { exportedAt: '2026-09-18T01:00:00Z', profile: {}, consentEvents: [], activitySummaries: [], activityRevisions: [{ revision: 2, status: 'pending_review' }], missions: [], ledger: [], appeals: [], redemptions: [] };
+    const exported = { exportedAt: '2026-09-18T01:00:00Z', profile: {}, consentEvents: [], activitySummaries: [], activityRevisions: [{ revision: 2, status: 'pending_review' }], missions: [], ledger: [], appeals: [], appealAdjustments: [], redemptions: [], notificationPreferences: { enabled: false, reminderTime: '19:00', quietStart: '22:00', quietEnd: '08:00', timezone: 'Asia/Hong_Kong', revision: 0, updatedAt: null } };
     const client = createCoreClient({ baseUrl, accessToken: async () => 'test', fetch: async () => Response.json({ data: exported, requestId: 'export-test' }) });
     expect(await client.exportAccount()).toEqual(exported);
   });
@@ -139,5 +139,70 @@ describe('bounded requests and summary reconciliation', () => {
       expect(vi.getTimerCount()).toBe(0);
       for (const timeoutMs of [0, -1, NaN, 0.5, 120001]) expect(() => createCoreClient({ baseUrl, accessToken: async () => null, timeoutMs })).toThrow('INVALID_TIMEOUT');
     } finally { vi.useRealTimers(); }
+  });
+});
+
+describe('demonstration rewards contract', () => {
+  const rewardId = '00000000-0000-4000-8000-000000000011';
+  const id = '00000000-0000-4000-8000-000000000012';
+  const idempotencyKey = '00000000-0000-4000-8000-000000000013';
+  const demoCode = '00000000-0000-4000-8000-000000000014';
+  const createdAt = '2026-09-20T01:00:00Z';
+  it('reads bounded canonical catalog/history and retains cancelled demonstrations', async () => {
+    const reward = { id: rewardId, titleKey: 'demo_badge', pointsCost: 10, stock: 2, isDemo: true };
+    const redemption = { id, rewardId, status: 'cancelled', demoCode, pointsCost: 10, createdAt };
+    const send = vi.fn()
+      .mockResolvedValueOnce(Response.json({ data: { items: [reward] }, requestId: 'catalog' }))
+      .mockResolvedValueOnce(Response.json({ data: { items: [redemption], nextCursor: '1' }, requestId: 'history' }));
+    const client = createCoreClient({ baseUrl, accessToken: async () => 'test', fetch: send });
+    expect(await client.getRewards()).toEqual({ items: [reward] });
+    expect(await client.getRedemptions({ limit: 1, cursor: '9007199254740993' })).toEqual({ items: [redemption], nextCursor: '1' });
+    expect(send.mock.calls[1]?.[0]).toBe(`${baseUrl}/redemptions?limit=1&cursor=9007199254740993`);
+  });
+  it('rejects merchant-like or malformed reward responses instead of treating them as redeemable', async () => {
+    for (const item of [
+      { id: rewardId, titleKey: 'demo_badge', pointsCost: 10, stock: 2, isDemo: false },
+      { id: rewardId, titleKey: 'demo_badge', pointsCost: 10, stock: -1, isDemo: true },
+      { id: rewardId, titleKey: 'demo_badge', pointsCost: 10, stock: 2, isDemo: true, merchantSecret: 'not-for-client' },
+    ]) {
+      const client = createCoreClient({ baseUrl, accessToken: async () => 'test', fetch: async () => Response.json({ data: { items: [item] }, requestId: 'invalid' }) });
+      await expect(client.getRewards()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+    }
+  });
+  it('reuses only the caller-supplied redemption key after ambiguous delivery, then cancels by owned record ID', async () => {
+    const body = { rewardId, idempotencyKey };
+    const send = vi.fn()
+      .mockRejectedValueOnce(new Error('lost response after commit'))
+      .mockResolvedValueOnce(Response.json({ data: { id, status: 'demonstration', demoCode, pointsCost: 10 }, requestId: 'retry' }))
+      .mockResolvedValueOnce(Response.json({ data: { id, status: 'cancelled' }, requestId: 'cancel' }));
+    const client = createCoreClient({ baseUrl, accessToken: async () => 'test', fetch: send });
+    await expect(client.redeemReward(body)).rejects.toMatchObject({ code: 'NETWORK_ERROR' });
+    expect(send).toHaveBeenCalledTimes(1);
+    await expect(client.redeemReward(body)).resolves.toMatchObject({ id, status: 'demonstration' });
+    expect(send.mock.calls[0]?.[1]?.body).toBe(JSON.stringify(body));
+    expect(send.mock.calls[1]?.[1]?.body).toBe(JSON.stringify(body));
+    await expect(client.cancelRedemption(id)).resolves.toEqual({ id, status: 'cancelled' });
+    expect(send.mock.calls[2]?.[0]).toBe(`${baseUrl}/redemptions/${id}/cancel`);
+    expect(send.mock.calls[2]?.[1]?.body).toBe('{}');
+  });
+  it('rejects client amounts/identities and invalid pagination before dispatch', () => {
+    const send = vi.fn();
+    const client = createCoreClient({ baseUrl, accessToken: async () => 'test', fetch: send });
+    for (const extra of [{ pointsCost: 1 }, { userId: id }, { amount: 999 }]) {
+      expect(() => client.redeemReward({ rewardId, idempotencyKey, ...extra })).toThrow();
+    }
+    expect(() => client.getRedemptions({ cursor: '0' })).toThrow();
+    expect(() => client.getRedemptions({ cursor: '1&userId=other' })).toThrow();
+    expect(() => client.cancelRedemption('../other-account')).toThrow();
+    expect(send).not.toHaveBeenCalled();
+  });
+  it('cancels all reward calls before identity lookup and does not dispatch a queued redemption after withdrawal', async () => {
+    const abort = new AbortController(); abort.abort();
+    const token = vi.fn(async () => 'test'); const send = vi.fn();
+    const client = createCoreClient({ baseUrl, accessToken: token, fetch: send });
+    for (const promise of [client.getRewards(abort.signal), client.getRedemptions({}, abort.signal), client.redeemReward({ rewardId, idempotencyKey }, abort.signal), client.cancelRedemption(id, abort.signal)]) {
+      await expect(promise).rejects.toMatchObject({ code: 'CANCELLED' });
+    }
+    expect(token).not.toHaveBeenCalled(); expect(send).not.toHaveBeenCalled();
   });
 });

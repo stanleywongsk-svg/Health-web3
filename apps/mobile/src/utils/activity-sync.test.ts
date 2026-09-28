@@ -15,8 +15,8 @@ function api() {
     syncActivity: vi.fn(async (_input: ActivitySyncInput, _signal?: AbortSignal) => ({ ...syncResponse })),
     claimMission: vi.fn(async (_instance: string, _key: string, _signal?: AbortSignal) => ({ ...claimResponse })),
     getMissions: vi.fn(async (_signal?: AbortSignal) => ({ items: [] })),
-    getPointsSummary: vi.fn(async (_signal?: AbortSignal) => ({ availablePoints: 10, pendingEvaluations: 0, earnedPoints: 10, spentPoints: 0, reversedPoints: 0 })),
-    getLedger: vi.fn(async (_page: { limit?: number; cursor?: string } = {}, _signal?: AbortSignal) => ({ items: [{ id: '1', kind: 'daily_award' as const, points: 10, createdAt: '2026-09-18T01:01:00Z', instanceId: syncResponse.instanceId }], nextCursor: null })),
+    getPointsSummary: vi.fn(async (_signal?: AbortSignal) => ({ balance: 10, correctionPoints: 0, availablePoints: 10, pendingEvaluations: 0, earnedPoints: 10, spentPoints: 0, reversedPoints: 0 })),
+    getLedger: vi.fn(async (_page: { limit?: number; cursor?: string } = {}, _signal?: AbortSignal) => ({ items: [{ id: '1', kind: 'daily_award' as const, points: 10, createdAt: '2026-09-18T01:01:00Z', instanceId: syncResponse.instanceId, adjustmentId: null, relatedEntryId: null }], nextCursor: null })),
   };
 }
 function fixture() { const client = api(); const flow = createActivitySyncCoordinator({ api: client, randomUUID }); flow.setContext({ accountId: 'account-a', cloudSync: true }); return { client, flow }; }

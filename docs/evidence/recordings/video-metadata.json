@@ -1,0 +1,10 @@
+{
+  "durationSeconds": 396.033333,
+  "sizeBytes": 5296388,
+  "sha256": "842262f0345ab62b10c4d6b97b078db2ea1fcc66736ff0737299147c63337b42",
+  "resolution": "720x1638",
+  "codec": "H.264",
+  "frameRate": 30,
+  "sourceCapture": "Uncut simulator display; OTP box redaction and context banner only",
+  "audio": false
+}

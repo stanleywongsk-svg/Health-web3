@@ -2,15 +2,23 @@
 
 An iOS-first adult health-habit app with read-only HealthKit and server-controlled, nontransferable points. UI is Simplified Chinese; mission time is Asia/Hong_Kong. Points have no cash value or future-token conversion rights. No wallet is required.
 
-This repository implements the **first core slice**, not the complete 58-requirement product. Native reads, email OTP screens, separate consent, minimum daily summaries, daily/weekly mission accounting, ledger, export/appeal/deletion requests are connected in code. PostgreSQL and client tests use synthetic data. Actual Supabase email delivery, two-iPhone acceptance, full admin operations and release approval remain open. The independent Web3 Lab and conditional P1/P2 work are not implemented.
+This repository implements the **core app slices**, not the complete 58-requirement product. Native reads, email OTP screens, separate consent, minimum daily summaries, daily/weekly mission accounting, ledger, export/appeal/deletion requests, demonstration rewards, two-person correction APIs, notification preferences and optional local iOS reminders are connected in code. PostgreSQL and client tests use synthetic data. Real local Supabase OTP/JWT/Edge and deletion-worker tests now pass, and native compilation/simulator startup are verified. External email delivery, two-iPhone HealthKit acceptance, full admin operations and release approval remain open. The independent Web3 Lab and conditional P1/P2 work are not implemented.
 
 Start with the [unfinished work report](docs/UNFINISHED_REPORT.md) and [continuation prompt](docs/CONTINUE_PROMPT.md). See also [implementation status](docs/IMPLEMENTATION_STATUS.md), [executed evidence](docs/TEST_EVIDENCE.md), [device setup](docs/DEVICE_SETUP.md), and [human handoff](docs/HUMAN_HANDOFF.md). The complete brief is [MEGA_PROMPT.md](MEGA_PROMPT.md); original IDs/ownership remain in [requirements.json](docs/requirements.json).
+
+## 简体中文提案与操作录像
+
+- [应用说明与商业提案（Word）](docs/proposals/HealthLoop_应用说明与商业提案_简体中文.docx) · [可编辑 Markdown 源稿](docs/proposals/HealthLoop_应用说明与商业提案_简体中文.md)
+- [Train to Earn 代币经济与路线图（Word）](docs/proposals/HealthLoop_Train_to_Earn代币经济与路线图_简体中文.docx) · [可编辑 Markdown 源稿](docs/proposals/HealthLoop_Train_to_Earn代币经济与路线图_简体中文.md)
+- [模拟器实际操作录像（MP4）](docs/evidence/recordings/HealthLoop-simulator-walkthrough.mp4) · [录像说明](docs/evidence/recordings/README.md) · [2026-09-28 验证记录](docs/SIMULATOR_WALKTHROUGH_20260928.md)
+
+两份提案供产品与商业讨论，不修改现行实现 brief，也不授权代币发行、主网部署或核心健康数据换币。录像使用本机模拟器与合成账号，验证码已遮蔽；它证明记录中的登录和界面操作，不证明实机 HealthKit、发奖、兑换或通知投递通过。
 
 ## Toolchain
 
 - Node **24.19.0** (`.nvmrc`), pnpm **11.19.0**
 - Expo **55.0.31**, React Native **0.83.10**, React **19.2.0**
-- PostgreSQL **17**, Supabase CLI/local Docker for full Auth/Edge testing
+- PostgreSQL **17**, pinned Supabase CLI **2.117.0** / local Docker for full Auth/Edge testing
 - Xcode compatible with Expo55 and CocoaPods for iOS development builds
 - Deno **2.7.1** for Edge checks
 
@@ -20,11 +28,14 @@ Use the pinned Node in your shell before running commands. The historical implem
 pnpm install --frozen-lockfile
 pnpm check
 pnpm mobile:bundle
+pnpm mobile:preflight
 pnpm typecheck:edge
 pnpm test:edge
 ```
 
 `check` runs lint, strict TypeScript checks, unit tests and import/secret/requirement boundary checks. `mobile:bundle` builds the real iOS JavaScript bundle and rejects synthetic fixture code. Neither command proves native compilation, signing or real-device HealthKit access.
+
+`mobile:preflight` checks native host prerequisites without installing components or accepting licenses. On 2026-09-24 it passed on this Mac. Fresh prebuild, 97 Pods and actual unsigned iPhoneOS/Simulator compilation passed; the simulator app was installed and launched with embedded JavaScript. On 2026-09-28 the configured, ad-hoc signed simulator app completed actual local OTP login, separate consent, main-page navigation, reminder-off saving, export share-sheet opening, authenticated cold restart, and logout followed by a logged-out cold restart. See [native evidence](docs/NATIVE_BUILD_EVIDENCE.md) and the [recorded walkthrough](docs/SIMULATOR_WALKTHROUGH_20260928.md). Physical-device signing and two-iPhone HealthKit acceptance remain open; the unsigned device artifact is not an installable release.
 
 ## Local backend
 
@@ -41,14 +52,9 @@ HEALTHLOOP_ALLOW_DB_RESET=local-only pnpm test:integration
 
 Create/start that database first using the tested instructions in [BACKEND_NOTES](docs/BACKEND_NOTES.md), or provide an equivalent local PostgreSQL17 database. Never point this runner at shared data. It supplies a local `auth.uid/jwt/role` shim so actual RLS/locks/transactions run; the shim does **not** validate Supabase email delivery or real JWT signatures.
 
-For the complete local Supabase services, install a compatible Supabase CLI and make Docker healthy, then from the repository root:
+For full local Auth/Edge services, use the pinned CLI and the [local stack instructions](docs/LOCAL_STACK_TESTING.md). They preserve database volumes, restrict host access and keep credential output out of coding transcripts. A first start applies migrations and seed; resetting is not a normal startup step.
 
-```sh
-supabase start
-supabase db reset
-```
-
-The supplied seed is explicitly local/synthetic. Follow BACKEND_NOTES to configure real-native development separately; the real app rejects synthetic mode and never falls back to generated health readings. Copy the Edge `.env.example`, set local values, and serve the core function using the documented backend command. Obtain local public keys from `supabase status`; do not commit or paste secrets into chat. Read local OTP emails in the configured email sink on port54324.
+The supplied seed is explicitly local/synthetic. Configure real-native development separately; the real app rejects synthetic mode and never falls back to generated readings. The local mail sink on port54324 captures OTP mail without sending external email. Public client keys belong in ignored app configuration; service-role credentials never belong in the app or reports.
 
 ## Mobile
 
@@ -67,16 +73,19 @@ A generated iOS project can also be prepared without installing native dependenc
 pnpm --filter @healthloop/mobile exec expo prebuild --platform ios --no-install
 ```
 
-The current React Native prebuilt-core CocoaPods path rejects project paths containing spaces on this host. Native verification used a temporary no-space staging path; see TEST_EVIDENCE for the outcome and exact steps. Do not interpret prebuild or JavaScript export success as a signed install.
+The current React Native prebuilt-core CocoaPods path rejects project paths containing spaces on this host. The restored checkout uses `/Users/wi/healthloop` to avoid this issue; see TEST_EVIDENCE for successful native compilation and remaining signing/device gates. Do not interpret prebuild or JavaScript export success as a signed install.
 
 ## Scope and operation
 
 - No synthetic mobile build is shipped. Isolated provider fixtures and disposable database data are test-only.
-- No active merchant voucher, sponsor campaign, notifications, admin console or Lab wallet flow is presented as complete.
-- Offline consent recovery and reconnect behavior are implemented and tested with synthetic inputs; native device verification is still open. Full correction approvals, retention scheduling, backup replay and store acceptance remain checkpoint tasks.
+- No active merchant voucher, sponsor campaign, admin console or Lab wallet flow is presented as complete.
+- Reminders default off, require an explicit save and OS permission, use Hong Kong time and stay outside the configured quiet interval. Closing the toggle stops this device immediately and records a local stop even offline; save synchronizes the account setting. Only a generic local message is scheduled, with no push token or health/reward content. Actual permission sheets and delivery still require device verification.
+- Offline consent recovery and reconnect behavior are implemented and tested with synthetic inputs; native device verification is still open. Correction approval APIs append daily/weekly deltas and retain true negative balances; the browser admin console/live MFA, retention scheduling, backup replay and store acceptance remain checkpoint tasks.
 - [API](docs/API.md), [architecture](docs/ARCHITECTURE.md), [security](docs/SECURITY.md), [privacy data map](docs/PRIVACY_DATA_MAP.md), and [operations](docs/OPERATIONS.md) describe actual boundaries and release blockers.
 - Remote provisioning, publishing, production migrations and testnet broadcasts require explicit approval. Mainnet operations are outside this brief.
 
 ## Source backup and continuation
 
-A verified public source backup is available at [stanleywongsk-svg/Health-web3](https://github.com/stanleywongsk-svg/Health-web3). It includes the source snapshot, original planning documents, unfinished-work report, continuation prompt and a Git bundle preserving seven local branch histories. See [backup verification](docs/GITHUB_BACKUP.md) and [restore instructions](docs/BACKUP_AND_RESTORE.md). Recreate dependencies and disposable test databases from a fresh clone; historical host paths and staging artifacts are not recovery dependencies. This backup does not establish native or real Auth/device acceptance.
+An earlier verified public source backup is available at [stanleywongsk-svg/Health-web3](https://github.com/stanleywongsk-svg/Health-web3). The operator has authorized another upload of current source, relevant evidence and the two proposals. Use [GITHUB_BACKUP.md](docs/GITHUB_BACKUP.md) for the actual verified remote commit and coverage; preparing these files does not establish that the new upload has completed. The original planning documents and historical Git bundle remain preserved. Recreate dependencies and disposable test databases from a fresh clone; historical host paths and staging artifacts are not recovery dependencies. A source backup is separate from runtime and device acceptance.
+
+The user changed the earlier cleanup strategy and requested continued local development. Keep the restored checkout, dependencies and local commits; do not delete them after uploading. Do not replace newer local work with an older remote snapshot. See the newest [test evidence](docs/TEST_EVIDENCE.md) and [restore instructions](docs/BACKUP_AND_RESTORE.md) before resuming.

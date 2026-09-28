@@ -2,9 +2,12 @@
 
 The real build has no synthetic fixture import or automatic data fallback. `EXPO_PUBLIC_DATA_MODE=real` is mandatory. Expo 55.0.31 uses React 19.2.0 / React Native 0.83.10 from its published bundledNativeModules.json. Official SDK 55 requirements: Xcode 26.2+, iOS 15.1+. Local module scaffold generated with create-expo-module 57.0.1; template samples replaced with the SDK55-compatible Expo Modules DSL and iOS15.1 podspec.
 
+2026-09-24: actual iPhoneOS and Simulator compilation passed. The configured simulator now displays the initial Chinese login screen with Xcode local ad-hoc signing; no native OTP/session-write or physical-device health acceptance is implied. Do not disable simulator signing for authentication tests: the completely unsigned build produced Keychain `-34018` due to missing application identity entitlements. Keep SecureStore enabled and use the exact successful command in [NATIVE_BUILD_EVIDENCE](../../docs/NATIVE_BUILD_EVIDENCE.md). A simulator ad-hoc signature does not replace eligible physical-device signing.
+
 From the installed workspace:
 
 ```
+pnpm mobile:preflight
 pnpm --filter @healthloop/mobile prebuild
 pnpm --filter @healthloop/mobile ios --device
 ```
@@ -22,7 +25,9 @@ Run acceptance on **two physical compatible iPhones**. Record model/iOS/build, s
 7. Request sleep/heart rate separately. Sleep union avoids overlap, heart rate shows measured time, raw rows stay in memory only. Missing/invalid values never fabricated. Clear on consent withdrawal, logout and account switch.
 8. Export invokes OS share sheet only on request. Correction accepts task date and reason. Delete requires fresh email OTP before DELETE; test old JWT rejection server-side.
 9. Large text / VoiceOver: all four tabs, buttons, statuses, seven-day values, dynamic layouts. No reward catalog is falsely presented as active; disabled item explains not open.
+10. P29 local reminders: confirm first launch is off and does not request notification permission. Enable and explicitly save; refuse permission and continue using login, health, missions and ledger. Permit in OS Settings, return/refresh and save; verify one generic daily notification at the chosen Hong Kong time, foreground/background behavior and actual system delivery. Test both sides of midnight quiet hours, inclusive start/exclusive end, and travel/device timezone changes. Focus/OS suppression must not be called a successful delivery. No health values, reward amount or account ID may appear in the OS request.
+11. Disable reminders while offline or while an enable/save/permission request is pending; relaunch and verify no reactivation from an older server response. Save the stop after reconnect. Test another-device preference conflict, logout/account switch and deletion with an OS cancellation failure. A failure must be visible without blocking core use or authenticated deletion. Old-account scheduling must be cancelled before the next account's request. A closed app cannot instantly apply remote changes; verify foreground reconciliation. Record these as device results only when actually executed.
 
-Source policy intentionally undercounts ambiguous overlapping samples and does not claim parity with Apple Health totals. Server sees only allowed category, random source pin token, policy, date, eligible count, revision, timezone and observation time; clients can still spoof these claims. Device attestation is not implemented. No sleep/heart-rate data uploads or HealthKit writes exist. Demo execution, reward redemption UI, actual notification scheduling and active sponsors are not implemented in this slice.
+Source policy intentionally undercounts ambiguous overlapping samples and does not claim parity with Apple Health totals. Server sees only allowed category, random source pin token, policy, date, eligible count, revision, timezone and observation time; clients can still spoof these claims. Device attestation is not implemented. No sleep/heart-rate data uploads or HealthKit writes exist. Demonstration redemption UI and local notification scheduling are implemented in code but have no real-device acceptance yet. Active sponsors and the independent Lab remain unimplemented.
 
 Official references checked: https://docs.expo.dev/versions/v55.0.0/ ; https://docs.expo.dev/modules/module-api/ ; https://developer.apple.com/documentation/healthkit/authorizing-access-to-health-data ; https://supabase.com/docs/guides/auth/quickstarts/react-native . Native build and real-device checks must be recorded by actual execution, not inferred from TypeScript tests.

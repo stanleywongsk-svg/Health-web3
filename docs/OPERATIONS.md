@@ -1,6 +1,6 @@
 # Operations — development only
 
-Migrations are forward-only once applied to a shared database. This initial migration has been exercised only in disposable local test databases. Never run the reset test runner against a production or shared project. The runner requires a loopback host, a `healthloop_test_` database name and explicit `HEALTHLOOP_ALLOW_DB_RESET=local-only`.
+Migrations are forward-only once applied to a shared database. The core and forward correction migrations have been exercised only in disposable local test databases. Never run the reset test runner against a production or shared project. The runner requires a loopback host, a `healthloop_test_` database name and explicit `HEALTHLOOP_ALLOW_DB_RESET=local-only`.
 
 ## Bootstrap and migrations
 
@@ -8,7 +8,7 @@ Use the pinned runtime, `pnpm install --frozen-lockfile`, then the local Supabas
 
 ## Reward incident switch
 
-An authorized operator with strengthened authentication uses the implemented pause RPC described in BACKEND_NOTES. It locks the same settings record used when claims post. Pause blocks new claims/redemptions and leaves ledger reads available. Capture actor/reason/audit evidence; never erase history to make a balance appear correct. Full admin console and second-person adjustment review remain open.
+An authorized operator with strengthened authentication uses the implemented pause RPC described in BACKEND_NOTES. It locks the same settings record used when claims post. Pause blocks new claims/redemptions and all adjustment approvals; it leaves ledger reads, cancellation refunds, proposals and rejections available subject to their normal permissions. Capture actor/reason/audit evidence; never erase history to make a balance appear correct. Second-person adjustment RPCs are implemented; the browser admin console and live MFA enrollment remain open.
 
 ## Backups and recovery
 
@@ -23,3 +23,13 @@ The proposed summary retention is 90 days. Scheduling and verification of purge/
 ## Reconciliation and rollback
 
 Balance is the sum of committed ledger points, not the mobile cache. Compare per-account totals, daily maxima (30) and weekly bonus maxima (20), and verify each debit/refund corresponds to a redemption. A failed transaction must roll back inventory and ledger together. Correct business errors through controlled compensating entries with reasons; do not update/delete ledger rows. Migration rollback should restore a separately verified backup or use reviewed forward correction migrations, never rewrite applied shared files.
+
+## Two-person correction procedure
+
+An authorized operator authenticates with MFA and fetches `/admin/reviews`. Review only the stored pending revision and the complete retained affected week. Submit an existing appeal/revision and a meaningful reason to `/admin/adjustments`; never provide an amount or alter SQL ledger rows. Record the idempotency key for uncertain retries. A different authorized reviewer with MFA inspects the same source and sends approve/reject plus their own reason/key to `/admin/adjustments/:id/decision`. Do not use a service key in a browser or manufacture `aal2` outside disposable tests.
+
+If state changed, `STALE_PROPOSAL` leaves the proposal pending; reject it and re-review current evidence. A fresh proposal must reference the latest still-reviewable submission. Missing/pruned evidence is a blocker, not permission to reconstruct invented steps. A withdrawn/deleting subject cannot be newly reviewed. All approvals honor the incident pause; rejection leaves the original appeal open. Approval resolves its selected appeal and pending flags up to the accepted revision; separate appeals remain separately tracked.
+
+After a decision, read canonical summary, missions, signed balance and ledger. Do not display the old idempotent receipt's balance as current. Check each correction's adjustment reference, previous entry where present and signed daily/weekly total. Negative balances after prior spending are valid; available spending is zero until the real balance recovers. Never erase earlier awards, advance epochs manually or bypass unique business keys to make reconciliation pass.
+
+Apply deletion/retention to the private review table before appeals; the implemented purge does this. Retained immutable audit/ledger links require restricted access and an approved retention basis. Exercise these paths in the pending isolated backup/restore drill before any live use.

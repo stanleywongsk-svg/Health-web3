@@ -18,3 +18,7 @@ Removed the main HealthLoop local directory, six archived worktrees, three proje
 ## Continue work
 
 Read [UNFINISHED_REPORT.md](UNFINISHED_REPORT.md) and use [CONTINUE_PROMPT.md](CONTINUE_PROMPT.md) in a fresh clone. [BACKUP_AND_RESTORE.md](BACKUP_AND_RESTORE.md) explains recovery of the original branch histories. Native compilation, real Auth/OTP, two-iPhone acceptance and other unfinished requirements remain open. Source-backup verification does not satisfy the P27 database restore/deletion-replay drill.
+
+## Restored for local development — 2026-09-20
+
+After the completed cleanup, the user explicitly changed strategy and requested continued work on this computer. A new clone of remote commit `659580f11e263fde551e49f63dbab0df6a18dd32` was restored to `/Users/wi/healthloop`; the old workspace path is a compatibility symlink. Branch `codex/resume-core` contains the resumed local work. Dependencies and a new disposable database were recreated. Keep this checkout; the historical cleanup is not a standing deletion instruction. New continuation commits are local unless a later delivery record verifies a push. The original archive hashes above describe their historical snapshot, not the evolving current source.

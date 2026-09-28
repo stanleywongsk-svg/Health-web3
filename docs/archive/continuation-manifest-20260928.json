@@ -1,0 +1,102 @@
+{
+  "date": "2026-09-28",
+  "source_checkpoint": "403c07367435f8afc92b847556596d04c833253b",
+  "bundle": "healthloop-continuation-20260928.bundle",
+  "bytes": 1112802,
+  "sha256": "41433285b8973f33e83eccf185acf282bcc730dcc3952bfa5ea6a376d6ecb343",
+  "refs": [
+    {
+      "sha": "5532079600f2bacbf5fc0b3aa2b08196d9dc8bd1",
+      "ref": "refs/heads/codex/appeal-accounting"
+    },
+    {
+      "sha": "e1f8cdfc5f8968d6b8b3c448b352509525707b02",
+      "ref": "refs/heads/codex/appeal-api"
+    },
+    {
+      "sha": "e7bffda299d6d9e0ba153f16e74fa47b8180bd94",
+      "ref": "refs/heads/codex/demo-rewards"
+    },
+    {
+      "sha": "dbbc121b80ef0e7a711aa3a0f3ce61e67c4a0b2b",
+      "ref": "refs/heads/codex/local-auth-20260924"
+    },
+    {
+      "sha": "8f31d36084659961c9c1fc5d493b6d8278319daa",
+      "ref": "refs/heads/codex/loopback-cli-20260924"
+    },
+    {
+      "sha": "b884d4dad8a54b83397bfb24898bd09f1ecdfd76",
+      "ref": "refs/heads/codex/native-build-20260924"
+    },
+    {
+      "sha": "5a38d6d3c4f9b18b336fb217137d992743c6edea",
+      "ref": "refs/heads/codex/native-readiness"
+    },
+    {
+      "sha": "630a2af451d722e5d9f896a4d9b0e2c5ba472801",
+      "ref": "refs/heads/codex/reminder-api"
+    },
+    {
+      "sha": "7d8e34fe14e9bcf5f75aa5e919d120eb99123ddc",
+      "ref": "refs/heads/codex/reminder-backend"
+    },
+    {
+      "sha": "403c07367435f8afc92b847556596d04c833253b",
+      "ref": "refs/heads/codex/resume-core"
+    },
+    {
+      "sha": "659580f11e263fde551e49f63dbab0df6a18dd32",
+      "ref": "refs/heads/main"
+    },
+    {
+      "sha": "659580f11e263fde551e49f63dbab0df6a18dd32",
+      "ref": "refs/remotes/origin/HEAD"
+    },
+    {
+      "sha": "659580f11e263fde551e49f63dbab0df6a18dd32",
+      "ref": "refs/remotes/origin/main"
+    },
+    {
+      "sha": "403c07367435f8afc92b847556596d04c833253b",
+      "ref": "HEAD"
+    },
+    {
+      "sha": "5532079600f2bacbf5fc0b3aa2b08196d9dc8bd1",
+      "ref": "worktrees/accounting/HEAD"
+    },
+    {
+      "sha": "630a2af451d722e5d9f896a4d9b0e2c5ba472801",
+      "ref": "worktrees/reminder-api/HEAD"
+    },
+    {
+      "sha": "dbbc121b80ef0e7a711aa3a0f3ce61e67c4a0b2b",
+      "ref": "worktrees/local-auth-20260924/HEAD"
+    },
+    {
+      "sha": "8f31d36084659961c9c1fc5d493b6d8278319daa",
+      "ref": "worktrees/loopback-cli-20260924/HEAD"
+    },
+    {
+      "sha": "7d8e34fe14e9bcf5f75aa5e919d120eb99123ddc",
+      "ref": "worktrees/reminder-backend/HEAD"
+    },
+    {
+      "sha": "b884d4dad8a54b83397bfb24898bd09f1ecdfd76",
+      "ref": "worktrees/native-build-20260924/HEAD"
+    },
+    {
+      "sha": "e7bffda299d6d9e0ba153f16e74fa47b8180bd94",
+      "ref": "worktrees/mobile/HEAD"
+    },
+    {
+      "sha": "5a38d6d3c4f9b18b336fb217137d992743c6edea",
+      "ref": "worktrees/native-readiness/HEAD"
+    },
+    {
+      "sha": "e1f8cdfc5f8968d6b8b3c448b352509525707b02",
+      "ref": "worktrees/api/HEAD"
+    }
+  ],
+  "scope": "All reachable local refs before proposal/publication packaging. Current delivered proposals, evidence and handoff files are preserved directly in the GitHub snapshot. This bundle deliberately precedes its own packaging commit. No ignored data, environment files or build output is included."
+}
