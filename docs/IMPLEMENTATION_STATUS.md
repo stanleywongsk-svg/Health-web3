@@ -1,5 +1,9 @@
 # Implementation status — verified checkpoint
 
+## README GitHub section refresh — 2026-10-05
+
+Updated `README.md` to describe the verified 5 October delivery: 216 files, current app/migrations/proposals, the successful source CI run and the independently verified documentation follow-up. Distinguished the historical simulator recording and excluded local files. Documentation only; no requirement ID, B/C assignment or application behavior changed. README relative-link/reference checks and `git diff --check` passed; application tests were not rerun. No documentation blocker remains. Next engineering task remains the current-source native walkthrough and signed two-iPhone acceptance with operator setup.
+
 ## Latest GitHub delivery — 2026-10-05
 
 Uploaded the complete app and project deliverables to public `main` at [b11b2f1](https://github.com/stanleywongsk-svg/Health-web3/commit/b11b2f1369d164459e94180b94067d5ec48acfef). A fresh clone passed Git integrity and matched all 216 files to local checkpoint `a6b8ab9`; `GITHUB_BACKUP.md` records the exact tree and byte count. The upload includes the existing P02/P10/P15/P16/P17/P25/P26/P28/P31/P32/P34/P35 implementation and documentation described below; publication itself implements no additional requirement or acceptance gate. All 58 IDs and B/C assignments remain unchanged.

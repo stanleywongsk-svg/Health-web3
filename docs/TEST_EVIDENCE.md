@@ -1,3 +1,7 @@
+# README GitHub section checks — 2026-10-05
+
+Replaced the stale September/180-file delivery paragraph in `README.md` with the verified October/216-file record, source commit/CI links, documentation follow-up, current deliverables and proposal index. Read the existing remote ref and local delivery evidence; the workspace was clean before editing. `git diff --check` passed. A Python `pathlib`/`re` check asserted the October date, 216-file count, removal of `all180` from this section, existing relative-link destinations, and the recorded source commit/Actions run identifiers; it passed. This documentation-only change does not rerun application tests or create new acceptance evidence. The successful application CI result remains the explicitly linked prior source run. Upload uses a non-force documentation commit with `[skip ci]`; final remote content is checked against the local Git tree.
+
 # GitHub publication checks — 2026-10-05
 
 The operator explicitly requested uploading the latest version. Inspected the current brief/register, instructions, all changed paths, destination and existing remote history. The local pre-upload parent tree matched remote `main` exactly. All 78 changed paths were committed locally as `a6b8ab98d15d3b679c95092b037622b5dc10954d`; the GitHub integration published identical tree `e32258bbc78a5ec13572265dd31328797d2ffb93` at `b11b2f1369d164459e94180b94067d5ec48acfef`, using remote parent `4691db7fbcbe64cb3e0a418980d22ac2bfafbd45` and `force: false`. No source file changed during the checks.
