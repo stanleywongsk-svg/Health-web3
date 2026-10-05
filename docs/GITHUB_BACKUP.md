@@ -1,6 +1,16 @@
 # Verified GitHub backup
 
-## Current delivery — 2026-09-28
+## Current delivery — 2026-10-05
+
+The operator requested uploading the latest version to the existing public repository. The complete source snapshot is [b11b2f1369d164459e94180b94067d5ec48acfef](https://github.com/stanleywongsk-svg/Health-web3/commit/b11b2f1369d164459e94180b94067d5ec48acfef), added to `main` as a non-force descendant of `4691db7fbcbe64cb3e0a418980d22ac2bfafbd45`. Its Git tree `e32258bbc78a5ec13572265dd31328797d2ffb93` exactly matches local checkpoint `a6b8ab98d15d3b679c95092b037622b5dc10954d`. This record is a documentation-only follow-up to that source snapshot.
+
+A fresh public clone passed `git fsck --full`; all **216 files / 9,847,834 bytes** matched the local snapshot by SHA-256 at **2026-10-05T10:23:56Z**. The delivery includes the revised X to Earn mobile flow, server mission progress, first-release capability enforcement and canonical personal achievements, forward migrations, regression tests, App Store/privacy handoff, updated editable business/research/tokenomics proposals, and the existing history archives. All 58 requirement IDs and B/C assignments are preserved.
+
+This upload session reran `pnpm check` (**434 tests / 24 files**, lint, root/mobile TypeScript and release boundaries), `pnpm typecheck:edge`, `pnpm test:edge` (**38 tests**) and `pnpm mobile:bundle` (**856 modules**); all passed. [GitHub Actions run 37296169894](https://github.com/stanleywongsk-svg/Health-web3/actions/runs/37296169894) **completed successfully** for the source commit at **2026-10-05T10:24:41Z**, including the database/integration suites. The documentation-only verification follow-up uses `[skip ci]`; the source pipeline was run and passed. Earlier current-source native evidence remains in `TEST_EVIDENCE.md` and is not represented as a fresh device test.
+
+CLI authentication was unavailable. The authorized GitHub integration created hash-verified blobs, the identical Git tree and a commit on the existing remote history, then advanced `main` without force. No credential, private test/runtime data, dependency directory, generated native project/build or raw recording was added. The scan's credential-URL matches were existing loopback/example rejection fixtures. Local source, dependencies and ignored QA/build artifacts remain on this computer. No runtime deployment, App Store submission, spending or chain transaction was performed.
+
+## Previous delivery — 2026-09-28
 
 The operator explicitly requested publication of current source and relevant files to the existing public repository. The complete delivery snapshot is [544716c2d13d9a616fac67e3f1fc3294f3452e69](https://github.com/stanleywongsk-svg/Health-web3/commit/544716c2d13d9a616fac67e3f1fc3294f3452e69), based on the prior remote main without force-updating it. Its Git tree `f52cc3871ea014b1a072df0828cd002949e2bba7` exactly matches local packaging checkpoint `ef2abc69c55421bbff5a7fce57cf1e2c679c99d7`. Later documentation-only commits record this verification; they do not replace the verified application or proposal artifacts.
 
@@ -42,7 +52,7 @@ Removed the main HealthLoop local directory, six archived worktrees, three proje
 
 ## Continue work
 
-Read [UNFINISHED_REPORT.md](UNFINISHED_REPORT.md) and use [CONTINUE_PROMPT.md](CONTINUE_PROMPT.md) in a fresh clone. [BACKUP_AND_RESTORE.md](BACKUP_AND_RESTORE.md) explains recovery of the original branch histories. Native compilation, real Auth/OTP, two-iPhone acceptance and other unfinished requirements remain open. Source-backup verification does not satisfy the P27 database restore/deletion-replay drill.
+Read [UNFINISHED_REPORT.md](UNFINISHED_REPORT.md) and use [CONTINUE_PROMPT.md](CONTINUE_PROMPT.md) in a fresh clone. [BACKUP_AND_RESTORE.md](BACKUP_AND_RESTORE.md) explains recovery of the original branch histories. Current-source native compilation and local real Auth/OTP now have recorded evidence; the latest native UI walkthrough, signed two-iPhone acceptance and other release gates remain open. Source-backup verification does not satisfy the P27 database restore/deletion-replay drill.
 
 ## Restored for local development — 2026-09-20
 

@@ -1,3 +1,33 @@
+# GitHub publication checks — 2026-10-05
+
+The operator explicitly requested uploading the latest version. Inspected the current brief/register, instructions, all changed paths, destination and existing remote history. The local pre-upload parent tree matched remote `main` exactly. All 78 changed paths were committed locally as `a6b8ab98d15d3b679c95092b037622b5dc10954d`; the GitHub integration published identical tree `e32258bbc78a5ec13572265dd31328797d2ffb93` at `b11b2f1369d164459e94180b94067d5ec48acfef`, using remote parent `4691db7fbcbe64cb3e0a418980d22ac2bfafbd45` and `force: false`. No source file changed during the checks.
+
+Commands actually run in this upload session:
+
+```sh
+export PATH="/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH"
+pnpm check
+pnpm typecheck:edge
+pnpm test:edge
+pnpm mobile:bundle
+git diff --check
+git diff --exit-code -- docs/requirements.md docs/requirements.json
+git add -A && git diff --cached --check
+GIT_TERMINAL_PROMPT=0 git clone --branch main --single-branch https://github.com/stanleywongsk-svg/Health-web3.git .local/github-upload-20261005/verify
+git -C .local/github-upload-20261005/verify fsck --full
+python3 .local/github-upload-20261005/verify-snapshot.py --remote-commit b11b2f1369d164459e94180b94067d5ec48acfef --local-ref a6b8ab98d15d3b679c95092b037622b5dc10954d --output .local/github-upload-20261005/source-verification.json
+```
+
+All final checks above exited 0: **434 tests / 24 files**, zero-warning lint and root/mobile TypeScript; Edge TypeScript and **38 tests**; **35 client files / 58 requirement assignments / 46 reachable sources / 566 dependency manifests**; iOS export **856 modules**, real HealthKit bridge retained and excluded providers/fixtures absent. The usual Expo NO_COLOR/FORCE_COLOR warnings were informational. No local database, real-Auth, Xcode, physical-device, wallet or provider suite was rerun for this upload.
+
+The candidate-path and credential-pattern scan covered all 216 project files, including Office XML/relationships. No excluded private/environment/build path, private key, provider token or JWT was found. Eleven credential-URL pattern hits were reviewed as existing local/example test fixtures, including deliberate rejection cases; sample environments contain empty credentials and public configuration placeholders. Existing reviewed archives and the processed recording were preserved. The immutable source snapshot and fresh public clone matched all **216 files / 9,847,834 bytes** by SHA-256, with identical file lists and Git tree, at **2026-10-05T10:23:56Z**. Local verification manifests/helper remain ignored under `.local/github-upload-20261005/`.
+
+Corrections and limitations: `gh auth status` reported no CLI login and the noninteractive dry-run push failed to obtain credentials, so the connected GitHub integration performed the authorized upload. The first hash-comparison helper stopped on an empty filename from the trailing NUL separator; filtering empty entries fixed the helper and the complete comparison then passed. Git integrity and commit/tree checks had already passed; no source was changed or failure hidden.
+
+[GitHub Actions run 37296169894](https://github.com/stanleywongsk-svg/Health-web3/actions/runs/37296169894) for source commit `b11b2f1` completed with **success** at **2026-10-05T10:24:41Z**. The public run API reported `event: push`, `status: completed`, `conclusion: success` when checked at **10:26:11Z**. This workflow includes frozen-lockfile installation, `pnpm check`, Edge checks, iOS export, `pnpm test:db && pnpm test:integration`, and the manual-gate reminder. The reminder does not fulfill its listed human gates. The subsequent verification record changes only three Markdown files and uses `[skip ci]` to avoid repeating the already successful source pipeline.
+
+This is source publication, not runtime deployment, Apple approval or new B/C acceptance. All requirement IDs/assignments and local files are retained. Current-source native UI and signed two-iPhone acceptance remain the next executable engineering work with operator setup; no automatic continuation was scheduled.
+
 # Business proposal split and deletion checks — 2026-10-05
 
 Documentation-only revision: the main Traditional Chinese proposal is now four pages; the new independent Web3/Tokenomics Word file is five pages. This entry supersedes the earlier eight-page artifact checks below. Read the current brief/register, instructions, release policy, badge source and prior proposal; preserved concurrent app work and the existing editable slide deck. No application, device, wallet or ad-provider tests were run and no requirement acceptance, external approval or audit was completed by this document task.
