@@ -1,3 +1,142 @@
+# Business proposal split and deletion checks — 2026-10-05
+
+Documentation-only revision: the main Traditional Chinese proposal is now four pages; the new independent Web3/Tokenomics Word file is five pages. This entry supersedes the earlier eight-page artifact checks below. Read the current brief/register, instructions, release policy, badge source and prior proposal; preserved concurrent app work and the existing editable slide deck. No application, device, wallet or ad-provider tests were run and no requirement acceptance, external approval or audit was completed by this document task.
+
+Commands actually run from `/Users/wi/healthloop`:
+
+```sh
+/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node /Users/wi/.codex/plugins/cache/openai-primary-runtime/documents/26.909.12148/skills/documents/container_tools/mark_artifact_operation_started.mjs --operation-kind edit --expected-output-count 2 --output-format docx
+/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 scripts/build-business-proposal-tc.py
+FONTCONFIG_FILE=/Users/wi/healthloop/.local/business-proposal/fontconfig.xml PATH=/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:$PATH /Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 /Users/wi/.codex/plugins/cache/openai-primary-runtime/documents/26.909.12148/skills/documents/render_docx.py docs/proposals/HealthLoop_Business_Proposal_TC.docx --output_dir .local/proposal-split/final/HealthLoop_Business_Proposal_TC --emit_pdf
+FONTCONFIG_FILE=/Users/wi/healthloop/.local/business-proposal/fontconfig.xml PATH=/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:$PATH /Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 /Users/wi/.codex/plugins/cache/openai-primary-runtime/documents/26.909.12148/skills/documents/render_docx.py docs/proposals/HealthLoop_Web3_Tokenomics_TC.docx --output_dir .local/proposal-split/final/HealthLoop_Web3_Tokenomics_TC --emit_pdf
+/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 scripts/build-business-proposal-tc.py --document web3
+FONTCONFIG_FILE=/Users/wi/healthloop/.local/business-proposal/fontconfig.xml PATH=/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:$PATH /Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 /Users/wi/.codex/plugins/cache/openai-primary-runtime/documents/26.909.12148/skills/documents/render_docx.py docs/proposals/HealthLoop_Web3_Tokenomics_TC.docx --output_dir .local/proposal-split/final2/HealthLoop_Web3_Tokenomics_TC --emit_pdf
+/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 .local/proposal-split/verify.py
+```
+
+The verifier invokes bundled Poppler `pdftotext` in layout/raw modes and checks both outputs. Passed: valid ZIP/XML; no comments, tracked revisions or placeholders; four/five rendered pages; three/five editable tables; four/two hyperlink instances; every body/table paragraph present in rendered text; all seven requested sections absent; deleted business pricing/pilot/resource numbers absent from the main proposal. Candidate allocation totals 100% and 100,000,000 units, reward examples each total 300,000 within a 60-unit personal cap, and team vesting examples total 5,000,000 at month 24 and 15,000,000 at month 48.
+
+All four main pages and five companion pages were inspected at original resolution. The companion review found one NFT acronym split across two lines on page one; revised wording resolved it. The final page one was re-inspected, and byte comparisons proved pages two through five unchanged from the reviewed images. Refund wording also distinguishes unused authorization from already-transferred tokens. Final results and SHA-256 are in ignored `.local/proposal-split/validation.json`; QA PDFs/PNGs are not deliverables. Pre-edit proposal files are retained in that ignored task directory.
+
+SHA-256 preservation checks passed for AGENTS.md, MEGA_PROMPT.md, both requirement registers and `HealthLoop_Business_Proposal_Editable.pptx`. `git diff --check` and `git diff --exit-code -- docs/requirements.md docs/requirements.json` passed (exit 0). Official Apple, AdMob and Base references were checked on 2026-10-05. Existing engineering counts are cited as prior records, not newly run tests. The current first-release native product has no wallet/NFT reward boost; the independent synthetic Lab and candidate token model remain distinct. No remaining document blocker or automatic continuation; the next document action is a requested source revision and rebuild.
+
+# Partner business proposal document — 2026-10-05
+
+Delivered `docs/proposals/HealthLoop_Business_Proposal_TC.docx` with editable Markdown and `scripts/build-business-proposal-tc.py`. These checks concern the document only; no application test, physical-device HealthKit check, wallet/provider validation, human acceptance, legal approval or independent audit was newly completed. Prior engineering counts in the proposal are explicitly attributed to the existing 2026-10-05 record.
+
+Commands actually run from `/Users/wi/healthloop`:
+
+```sh
+/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node /Users/wi/.codex/plugins/cache/openai-primary-runtime/documents/26.909.12148/skills/documents/container_tools/mark_artifact_operation_started.mjs --operation-kind create --expected-output-count 1 --output-format docx
+/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 scripts/build-business-proposal-tc.py
+FONTCONFIG_FILE=/Users/wi/healthloop/.local/business-proposal/fontconfig.xml PATH=/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:$PATH /Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 /Users/wi/.codex/plugins/cache/openai-primary-runtime/documents/26.909.12148/skills/documents/render_docx.py docs/proposals/HealthLoop_Business_Proposal_TC.docx --output_dir .local/business-proposal-tc/delivery --emit_pdf
+/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/poppler/poppler/bin/pdftotext -layout .local/business-proposal-tc/delivery/HealthLoop_Business_Proposal_TC.pdf .local/business-proposal-tc/delivery/text.txt
+/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/poppler/poppler/bin/pdftotext -raw .local/business-proposal-tc/delivery/HealthLoop_Business_Proposal_TC.pdf .local/business-proposal-tc/delivery/text-raw.txt
+/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 .local/business-proposal-tc/verify.py
+```
+
+Final verification passed: 8 A4 pages, 8 editable tables, 6 preserved external hyperlinks, valid ZIP/XML, no tracked revisions/comments/placeholders, and every body/table paragraph present in the rendered PDF text. Recomputed unit contributions (11,400 / 7,800), monthly scenario (130,000 revenue / 125,000 cost), cost sensitivity (-5,400), resource scenario (342,000), and token allocation (100% / 100,000,000). All eight rendered pages were inspected at original resolution; after final number-wrap copy fixes, pages 4/6 were re-inspected and byte comparisons proved pages 1/2/3/5/7/8 unchanged from inspected images. Results and SHA-256 are in ignored `.local/business-proposal-tc/validation.json`.
+
+Corrections before delivery: the initial render lacked Chinese glyphs; exposing existing system fonts through the task-local fontconfig resolved this. Initial font-corrected output had excess/blank pages; explicit leading, no grid snapping and heading-based page breaks produced eight clean pages. A paragraph-completeness check initially failed because layout extraction interleaved table columns; raw PDF reading order preserved complete cell paragraphs and passed the same full-text assertion. An optional `fitz` probe and an incorrect `pdftotext` wrapper path failed; the bundled renderer and discovered native Poppler executable completed the checks without new dependencies. Internal PDFs/PNGs are QA only.
+
+Official Apple review rules, AdMob rewards policy and Base network documentation were read live on 2026-10-05. Source and final copy review kept NFT/wallet reward boosts conditional and outside the proposed Hong Kong iOS first release. No market traction, platform approval or real partner relationship was invented. The next proposal task is a partner-specific pilot statement of work and pricing worksheet; existing technical acceptance remains open.
+
+Final repository checks: `git diff --check` and `git diff --exit-code -- docs/requirements.md docs/requirements.json` passed (exit 0). A bundled-Python check of the new Markdown and builder confirmed final newlines and no trailing whitespace. No application source or requirement register changed in this document task.
+
+# App Store policy research — 2026-10-05
+
+Research/documentation only. Read the current brief/register, AGENTS amendment, git status, implementation checkpoint, mobile environment/bundle guards and HealthKit configuration. Checked live official Apple review guidelines, HealthKit privacy, ATT FAQ, IAP, US storefront update and submission guidance, plus Google AdMob reward policy. Independent research passes compared NFT/storefront and health/advertising rules. Findings distinguish express rules from proposed HealthLoop designs and do not establish App Review approval.
+
+Delivered `docs/APP_STORE_RELEASE_RESEARCH.md`; preserved existing code and proposal edits. No application, database, device, wallet or ad SDK tests were run in this task. No technical requirement or human acceptance was completed. No service was provisioned, payment made, transaction broadcast, Apple contact initiated or app submitted.
+
+Executed document checks: `git diff --check -- docs/IMPLEMENTATION_STATUS.md docs/TEST_EVIDENCE.md` passed (exit 0), rerun after this entry; `git diff --exit-code -- docs/requirements.md docs/requirements.json` passed (exit 0), preserving the register. `git diff --no-index --check -- /dev/null docs/APP_STORE_RELEASE_RESEARCH.md` returned exit 1 for the new-file difference, with no whitespace diagnostics. A separate `python3`/`pathlib` check read that new report, asserted its final newline and absence of trailing spaces/tabs, and printed `New report whitespace check passed` (exit 0).
+
+# Business research presentation checks — 2026-10-05
+
+Documentation/artifact work only. Inspected the brief, all 58 requirements, existing source and concurrent changes, the prior business proposal, implementation status and dated application evidence. Official Hong Kong DH, Apple Support, Sweatcoin and Apple review-guideline sources were checked for the deck. The separate application's newly recorded 5 October evidence was incorporated; the older recording remains dated. This proposal session did not run primary research, an application suite, a native/device test, legal review or external deployment.
+
+Delivered `docs/proposals/HealthLoop_Business_Proposal_Research_Report.pptx`: **19 editable slides with 19 populated notes pages**. The 17-slide template was filled and two backup slides added for economics and readiness. Its exact original is retained in `docs/proposals/templates/Business_Proposal_Research_Report_Template.pptx`; SHA-256 matched the attachment. Speaker notes contain full source locations and limitations. The builder and generated Markdown preserve the content; `python-pptx==1.0.2` is pinned in the separate proposal requirements.
+
+Actual final commands, run from `/Users/wi/healthloop`:
+
+```sh
+/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 scripts/build-research-proposal.py
+FONTCONFIG_FILE=/Users/wi/healthloop/.local/business-proposal/fontconfig.xml /Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override/soffice -env:UserInstallation=file:///Users/wi/healthloop/.local/business-proposal/lo-charter --headless --convert-to pdf --outdir /Users/wi/healthloop/.local/business-proposal docs/proposals/HealthLoop_Business_Proposal_Research_Report.pptx
+/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override/pdftoppm -scale-to 1440 -png /Users/wi/healthloop/.local/business-proposal/HealthLoop_Business_Proposal_Research_Report.pdf /Users/wi/healthloop/.local/business-proposal/slide
+/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 .local/business-proposal/check_presentation.py
+```
+
+All four final commands passed with exit 0. The task-local checker matched **289 text shapes** to actual PDF text, found no text/frame overflow or divider intersections, parsed **93 Office XML/relationship parts**, confirmed **5 external source hyperlinks**, found no unresolved content placeholders and checked every slide's notes. Independent recalculation of the three financial scenarios, both break-even counts and two sensitivities passed. `.local/business-proposal/qa.json` records zero final issues.
+
+Initial rendering used unsuitable fallback fonts, including a distorted plus sign. Visual/geometry checks also identified overlong frames and a divider crossing on slide 17. Corrected these before delivery by using macOS `Charter` for the template's Charter typography, exposing system fonts only through a task-local renderer configuration and adjusting affected copy/frames. Every rendered slide was visually inspected. Later copy edits changed only slides 12/13, which were re-inspected. The final evidence refresh changed only slides 8/16, which were also re-inspected; PNG hashes confirmed the remaining previews were identical to reviewed versions. Internal PDF/PNG/checker files stay ignored; the requested deliverable is the PPTX. `git diff --check` passed with exit 0 after the checkpoint write.
+
+No technical requirement acceptance, human review or external approval was advanced. Primary-research findings, prices, future pilots and economic results remain labelled as proposed or unvalidated. Next proposal task: prepare the consent/recruitment protocol before fieldwork. Current app and optional-incentive changes belonging to other sessions were preserved.
+
+# X to Earn mobile revision — 2026-10-05
+
+Scope: current Simplified Chinese onboarding and four mobile tabs, canonical mission progress, accepted-summary claim recovery, and the existing core reward/privacy flow. No real health values were used. No external deployment, provisioning, publication, wallet connection or transaction broadcast occurred. No B/C human acceptance is inferred.
+
+Environment: macOS26.3, Xcode26.3/17C529, bundled Node24.19.0, pnpm11.19.0, PostgreSQL17.11. Expo55.0.31/React Native0.83.10 and the dependency lockfile are unchanged. Commands use:
+
+```sh
+export PATH="/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH"
+pnpm check
+pnpm typecheck:edge
+pnpm test:edge
+pnpm mobile:bundle
+git diff --check
+```
+
+| Executed check | Actual outcome / boundary |
+|---|---|
+| `pnpm check` | Exit0: zero-warning lint, root/mobile TypeScript, **355 tests / 20 files**, **34 client files / all 58 B/C requirement assignments**. Includes missing-vs-zero data, highest-tier top-up previews, accepted-summary claims, rollover, offline/consent/review actions, original-key recovery and stale-account/cancelled results. |
+| `pnpm typecheck:edge` | Exit0 for core handler and deletion worker. |
+| `pnpm test:edge` | Exit0: **34 tests** (30 core HTTP/schema/Auth-boundary tests + 4 worker-scope tests). |
+| `pnpm mobile:bundle` | Exit0: **853 modules**, one iOS Hermes bundle; real `HealthLoopHealth` present, synthetic provider/policies absent. Metro emits its existing NO_COLOR/FORCE_COLOR warnings; no build failure was suppressed. |
+| `pnpm test:db` | Exit0: **68 SQL groups**, including 100-way concurrency, immutable accounting, RLS, consent/deletion, exact cutoff, reviewed corrections, and six new canonical-progress groups. |
+| `pnpm test:integration` | Final exit0: **25 tests** through the real handler/client/PostgreSQL with explicitly injected synthetic Auth/transport. Added direct claim recovery proves original-key replay after response loss, no new activity upload and exactly one ledger award. |
+| `HEALTHLOOP_ALLOW_LOCAL_STACK=local-only pnpm test:local --reporter=verbose --disableConsoleIntercept` | Exit0: **one sequential scenario / six groups**, actual local OTP/Auth (ES256), Edge, PostgREST, claim/ledger, RLS, preferences/export, refresh/logout and scoped durable deletion retry. Generated accounts/activity are synthetic and cleaned up. This is not native HealthKit evidence. |
+| Expo prebuild / CocoaPods | `pnpm --filter @healthloop/mobile exec expo prebuild --platform ios --no-install` passed; package manifest unchanged. `pod install` passed with **97 Pods** in the ignored generated iOS project. Existing no-app-icon warning remains a release-artwork task. |
+| Xcode simulator Release | Fresh ad-hoc simulator build passed exit0 in **148seconds** with zero compiler-error lines; the final incremental rebuild passed exit0 in **18seconds** and includes the final claim/UI changes. Exact command and final artifact are below. No physical-device signature or install was performed. |
+| Simulator UI walkthrough | **Not run.** `cua.getApp('Simulator')` reported the Mac locked and automatic unlock unavailable. The operator was asked to unlock while independent work continued. No screenshot or interaction was fabricated or substituted. |
+
+The database runner was pointed only at a newly created disposable `healthloop_test_earn_20261005` database in the existing `.local/pg17` cluster, bound to `127.0.0.1:55432`. It loaded every migration in order including `202610050001_mission_progress.sql`. Exact environment for the two SQL-backed suites:
+
+```sh
+HEALTHLOOP_TEST_DATABASE_URL=postgres://healthloop_local@127.0.0.1:55432/healthloop_test_earn_20261005 HEALTHLOOP_ALLOW_DB_RESET=local-only pnpm test:db
+HEALTHLOOP_TEST_DATABASE_URL=postgres://healthloop_local@127.0.0.1:55432/healthloop_test_earn_20261005 HEALTHLOOP_ALLOW_DB_RESET=local-only pnpm test:integration
+```
+
+The new SQL groups verify a null unread summary and zero balance; distinct accepted dates without posting points during reads; weekly progression independent of daily claims; pending downward/excessive revisions preserving canonical history; cross-user isolation; exact Hong Kong midnight/Monday rollover; pinned weekly goals across later versions; and inactive/anonymous rejection. Original accounting tests remain unchanged and passed.
+
+Two initial checks failed and were repaired, then rerun: ESLint discovered the old ignored `.local/proposals/github-verify-20260928` checkout and could not infer one TSConfig root; the config now names this root and excludes only ignored local/artifact copies. Edge typecheck exposed its older import map targeting only `schema.ts`; the map now targets the domain public `index.ts` which exports the new mission contract. An initial newly written test fixture also needed a literal error-code type; no production validation was loosened.
+
+The first `local:start` attempt failed because Docker Desktop was stopped (no Docker socket). After starting installed Docker Desktop, the guarded launcher passed and verified that this project's API54321/DB54322/Mailpit54324 bindings are loopback only. `pnpm exec supabase migration up --local` successfully applied the one new forward migration without resetting the stack. The real local HTTP suite then passed against `local:serve`, restoring the original seed demo mode. The synthetic stack is not a physical-device health backend.
+
+Native build command, from `apps/mobile/ios`, with the public-only loopback development/real configuration supplied to the child process:
+
+```sh
+xcodebuild -workspace app.xcworkspace -scheme app -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /Users/wi/healthloop/.local/earn-20261005/derived -jobs 4 CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES DEVELOPMENT_TEAM= build
+```
+
+The local helper reads the guarded CLI status in memory, verifies the public key's `anon` role, strips any service/private-secret environment variables and bounds the build process. No key was printed or persisted in mobile source/env files. Native application: `.local/earn-20261005/derived/Build/Products/Release-iphonesimulator/app.app`; build log and verification JSON are retained in `.local/earn-20261005/`. `codesign --verify --deep --strict` passed. Embedded bundle checks confirm the public loopback configuration, real native HealthKit module and new claim UI/recovery code; the service-role key and synthetic provider are absent. Final main.jsbundle SHA-256: `f192a3128e0a0907f2412114c27cb2d95e9b2a3b399b20800b9ea2221a0d40fa`. This proves compilation/bundle/signature checks only, not native runtime, authorization, layout or Keychain behavior.
+
+Cleanup completed: the real local stack contained **0 Auth users, 0 active profiles, 0 health summaries and 0 pending deletion jobs**, with seed `demo_mode=true`, after the HTTP test cleanup. The task-owned Edge serve process ended with the intentional SIGINT exit130. `pg_ctl -D .local/pg17 stop -m fast` and `HEALTHLOOP_ALLOW_LOCAL_STACK=local-only pnpm local:stop` both completed; the latter verified the HealthLoop stack stopped with volumes preserved. Source, dependencies, generated native project, simulator artifact and disposable database files are retained. Docker Desktop itself was not shut down globally. No background task runner or automatic continuation remains.
+
+The concurrently edited root AGENTS.md, scope-status note and business-proposal files were preserved. The optional NFT/wallet/rewarded-ad amendment is scope documentation, not functionality tested in this revision. Final `git diff --check` passed; package manifests and pnpm-lock.yaml remain unchanged.
+
+Remaining manual acceptance: unlocked simulator navigation, form/keyboard access, failed request/recovery UI, very large text and VoiceOver; actual HealthKit read/source metadata/lifecycle on two iPhones; physical-device signing; real operator review. Prior 2026-09-28 UI evidence belongs to the earlier source and is not reused as acceptance of these changed screens. The next executable check is the current-source simulator walkthrough described in IMPLEMENTATION_STATUS.
+
+# Optional activity incentive instruction amendment — 2026-10-05
+
+Documentation-only change requested by the user: root `AGENTS.md` now permits optional NFT purchase, verified wallet connection and completed rewarded ad views to unlock or increase capped rewards for verified activity goals. `DECISIONS.md` and `IMPLEMENTATION_STATUS.md` record the scope override, unchanged privacy/accounting/external-action boundaries and next implementation slice. No requirement ID is newly implemented or accepted. Pre-existing mobile/backend edits belong to other work and are not evidence for this amendment.
+
+Executed checks:
+
+- `git diff --check -- AGENTS.md docs/IMPLEMENTATION_STATUS.md docs/DECISIONS.md docs/TEST_EVIDENCE.md` — passed, exit 0; rerun after this evidence entry was added.
+- `git diff --exit-code -- docs/requirements.md docs/requirements.json` — passed, exit 0; the original 58-ID register and owner/reviewer assignments were not edited. The amendment explicitly takes precedence over conflicting historical scope text.
+- Reviewed the scoped document diff. No application, database, native, wallet or advertising-provider tests were run for this documentation-only change. No external provisioning, purchase, deployment or transaction was performed. Feature implementation, provider configuration and real device/wallet evidence remain outstanding.
+
 # Proposal and source delivery checks — 2026-09-28
 
 Application source was unchanged in this documentation and publication session. `PATH='<bundled Node24 bin>:/opt/homebrew/bin:$PATH' pnpm check` completed with exit0: zero-warning ESLint, root/mobile TypeScript, **322 tests / 17 files**, and **27 client files / 58 requirement assignments**. Database, Edge, native build and device suites were not rerun; their earlier results retain their recorded dates and scope. Two new Simplified Chinese proposals are decision documents, not implemented Web3 functionality or approval to issue a token. Final artifact and upload checks are recorded in GITHUB_BACKUP.
@@ -350,3 +489,72 @@ The later full staged whitespace check reported two formatting findings in the v
 After explicit public-upload approval, all 138 tracked files were uploaded to `https://github.com/stanleywongsk-svg/Health-web3`. Initial complete remote commit: `38c0425e01a440727f702d356ad507d8f36cbccb`; tree: `4dc233e418125aadbef639b2196581a8e40f1507`, exactly equal to local checkpoint `7ee8f5e29a1d1bc2eca61d40dde84913a7cddb59`. A fresh public `git clone` passed `git fsck --full`; all 136 source-file size/SHA-256 values and the history-bundle size/SHA-256 matched the downloaded manifest. `git bundle verify`, a separate bare clone of that downloaded bundle, `git fsck --full` and comparison of all seven branch refs passed. These checks downloaded from GitHub rather than reusing the original local files.
 
 The GitHub Actions runs endpoint reported `total_count: 0` after the archive commit, which used `[skip ci]`; no remote CI pass is claimed. This archival step reran no application, native, Auth or database acceptance tests. Public source publication was authorized; production changes, costs and blockchain broadcasts were not performed. The prior destination-pending note is historical. See GITHUB_BACKUP.md for the cleanup result.
+# App Store first-release implementation — 2026-10-05
+
+Implemented the user-adopted Hong Kong health/points/achievement plan across the native app, strict API contract, PostgreSQL enforcement, release guards and privacy/review handoff. Preserved existing uncommitted app/proposal work, all 58 requirement IDs and B/C assignments. No real health data, hosted provisioning, external email, spending, deployment, publication, wallet connection or chain transaction was used. No Apple approval, independent audit or human B/C acceptance is inferred.
+
+Environment: bundled Node **24.19.0**, pnpm **11.19.0**, PostgreSQL **17.11**, Xcode **26.3**, Expo **55.0.31** / React Native **0.83.10**. Dependency manifests and lockfile are unchanged. Root final commands used this PATH prefix (preserving the existing pnpm fallback directory):
+
+```sh
+export PATH="/Users/wi/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH"
+pnpm mobile:preflight
+pnpm check
+pnpm typecheck:edge
+pnpm test:edge
+pnpm mobile:bundle
+pnpm --filter @healthloop/mobile exec expo prebuild --platform ios --no-install
+git diff --check
+git diff --exit-code -- apps/mobile/package.json pnpm-lock.yaml docs/requirements.md docs/requirements.json
+```
+
+| Executed final check | Actual result and scope |
+|---|---|
+| `pnpm check` | Exit 0: lint, root/mobile TypeScript, **434 tests / 24 files**, all **58** requirement assignments; release graph checked **46** source files and **566** installed production dependency manifests. Final rerun includes the mobile race fixes and local Docker wrapper regression tests. |
+| Edge checks | `typecheck:edge` exit 0; `test:edge` **38 passed** (34 handler + 4 deletion-worker scope tests). |
+| PostgreSQL | `test:db` exit 0, **75 groups** including 100-way claim/approval/preference concurrency, corrected badge retraction, consent/deletion, fresh-spend rejection and legacy refunds/replays. Privileged fixture injects synthetic Auth claims; this alone is not real OTP evidence. |
+| Handler/client/SQL | `test:integration` exit 0, **27 tests** using the real SQL/handler/client with explicitly synthetic Auth/transport. |
+| Actual local HTTP | `test:local --reporter=verbose --disableConsoleIntercept` final exit 0, one sequential scenario / **7 groups**: real local ES256 OTP/JWT, claims, canonical private badges, fixed capabilities, blocked new demo spending, RLS, consent, reminders/export, refresh/logout and scoped durable Auth deletion/retry. Generated activity/accounts are synthetic and cleaned up. |
+| iOS JavaScript | Final `mobile:bundle` exit 0: **856 modules**, Hermes bundle `index-f25a27459a9c64c71eb3b658eea0a37d.hbc`; real HealthLoopHealth present, Lab/synthetic/deferred provider markers excluded. |
+| Native preflight/prebuild | Both exit 0. Xcode/SDK/CoreSimulator/Pods prerequisites passed; prebuild reused the ignored native project with no package change. It warned that no icon is configured and skipped a duplicate privacy-file reference; app artwork remains a release gate. |
+| Native simulator Release | Current-source incremental Xcode build exit 0 in **36 seconds**, `BUILD SUCCEEDED`, zero compiler-error lines. Ad-hoc simulator signature verified with `codesign --verify --deep --strict`. This is not a signed physical-device/archive submission. |
+| Embedded app checks | Public loopback config, release-policy marker, badge-gallery copy and native HealthKit bridge present; service-role value and synthetic provider absent. Built-app privacy plist matches six linked functionality categories; no tracking declaration, HealthKit write usage description, ATT usage request or remote-push background mode. Four existing React Native/Pods required-reason API categories retained. This is configuration/artifact inspection, not network/processor audit. |
+| Native UI | **Not run:** `cua.getApp("Simulator")` reported the Mac locked and automatic unlock unavailable. Requested manual unlock while independent work continued; no unlocked response or current-source UI evidence was obtained. Older recordings do not verify this gallery. |
+
+The root final SQL suites used a new, exclusive disposable database in the loopback PostgreSQL cluster:
+
+```sh
+/opt/homebrew/opt/postgresql@17/bin/pg_ctl -D /Users/wi/healthloop/.local/pg17 -l /Users/wi/healthloop/.local/pg17-store-release.log -o '-h 127.0.0.1 -p 55432 -c max_connections=160' start
+/opt/homebrew/opt/postgresql@17/bin/createdb -h 127.0.0.1 -p 55432 -U healthloop_local healthloop_test_store_20261005_final
+HEALTHLOOP_TEST_DATABASE_URL=postgres://healthloop_local@127.0.0.1:55432/healthloop_test_store_20261005_final HEALTHLOOP_ALLOW_DB_RESET=local-only pnpm test:db
+HEALTHLOOP_TEST_DATABASE_URL=postgres://healthloop_local@127.0.0.1:55432/healthloop_test_store_20261005_final HEALTHLOOP_ALLOW_DB_RESET=local-only pnpm test:integration
+```
+
+The backend worker separately used `healthloop_test_store_20261005_backend`; final pinned-Node DB/integration/client checks also passed there. Neither SQL reset was aimed at the Auth stack. For real local HTTP:
+
+```sh
+HEALTHLOOP_ALLOW_LOCAL_STACK=local-only pnpm local:start
+pnpm exec supabase migration up --local
+HEALTHLOOP_ALLOW_LOCAL_STACK=local-only pnpm local:serve
+HEALTHLOOP_ALLOW_LOCAL_STACK=local-only pnpm test:local --reporter=verbose --disableConsoleIntercept
+```
+
+Applied only the new forward migration `202610050002_store_release.sql` to the existing local Supabase volume; no shared-stack reset. Wrapper verified API54321/DB54322/Mailpit54324 bound solely to 127.0.0.1. The HTTP harness restores its prior private demo setting, so this synthetic stack is not a ready real-device health environment.
+
+Native command (run from `apps/mobile/ios` by ignored `.local/store-release-20261005/build.mjs`):
+
+```sh
+xcodebuild -workspace app.xcworkspace -scheme app -configuration Release \
+  -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath /Users/wi/healthloop/.local/earn-20261005/derived -jobs 4 \
+  CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES DEVELOPMENT_TEAM= build
+```
+
+The helper obtains only guarded local status in memory, injects public development/real URLs and the anon key, strips service/private-key environment names, and writes a private log. `verify-build.mjs` verified the embedded bundle and ad-hoc signature without printing keys. Artifact: `.local/earn-20261005/derived/Build/Products/Release-iphonesimulator/app.app`; `main.jsbundle` SHA-256 **89c83c2f4863e35db4e43c85dbdba9c89a87cf70fb0a379a95f913a26b3e196b**. Logs and JSON verification remain under ignored `.local/store-release-20261005/`. The derived directory was reused, not a fresh dependency compilation.
+
+Failures/corrections before final passes: an initial PATH replacement omitted pnpm's existing fallback and exited127; using the prefix above fixed it. Initial worker mobile checks used system Node25, so root reran the full suite with Node24. Cross-review found a demo handler attesting the shipping policy; it now returns `NOT_SUPPORTED`. Mobile review found stale auth failures could affect a switched account, a concurrent policy failure could allow sync→claim, and older compound reads could overwrite newer accounting; captured account/epoch guards, per-mutation release checks and snapshot generation now cover these paths with 14 added regressions. A test-only lint warning was corrected before the final suite.
+
+Two initial `local:serve` attempts failed while Docker replaced the Edge container between list/inspect. The wrapper stopped its owned stack rather than bypass isolation. This also made the first native helper stop before compilation and one premature local HTTP attempt fail safely. The wrapper now retries only exact missing-container races, validates partial inspection results immediately, caps retries and reports credential-free operation categories; six new tests cover this fix. Final start/serve/HTTP/native runs then passed. Expected Expo color-variable warnings remain informational. No failed check was suppressed or relabelled as passed.
+
+Cleanup completed: interrupted the verified owned `local-backend.mjs serve` process, then `HEALTHLOOP_ALLOW_LOCAL_STACK=local-only pnpm local:stop` exited 0 and preserved volumes; `pg_ctl -D /Users/wi/healthloop/.local/pg17 stop` exited 0. The worker's exec-session ID was not pollable from root, so shutdown used the observed exact owned process followed by the guarded stop command. Source, dependencies, disposable databases and build artifacts were retained. Final diff/register/package/lockfile and release-document whitespace checks passed.
+
+Next executable task: current-source native UI walkthrough after Mac unlock, then signed two-iPhone HealthKit acceptance with operator setup. Provider integrations, App Store artwork/metadata, actual processor/legal approvals, hosted services, deletion/retention/backup operations and submission remain open. See `APP_STORE_REVIEW_NOTES.md`. No automatic continuation was scheduled.

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
+import { checkIosReleaseGraph } from './release-guard.ts';
 
 const errors = [];
 function files(dir) {
@@ -50,8 +51,10 @@ function walk(file) {
   }
 }
 walk('packages/health-provider/src/index.ts');
+const releaseGraph = checkIosReleaseGraph(process.cwd());
+errors.push(...releaseGraph.errors);
 const requirements = JSON.parse(fs.readFileSync('docs/requirements.json', 'utf8'));
 if (requirements.length !== 58 || new Set(requirements.map(r => r.id)).size !== 58) errors.push('Requirement register must retain all 58 unique IDs');
 for (const r of requirements) if (!['B', 'C'].includes(r.owner) || r.reviewer !== (r.owner === 'B' ? 'C' : 'B')) errors.push(`${r.id}: owner/reviewer assignments invalid`);
 if (errors.length) { console.error(errors.join('\n')); process.exitCode = 1; }
-else console.log(`Boundary checks passed: ${clientFiles.length} client files; 58 requirement assignments; no core fixture/Lab imports.`);
+else console.log(`Boundary checks passed: ${clientFiles.length} client files; 58 requirement assignments; iOS graph checked ${releaseGraph.sourceCount} sources and ${releaseGraph.packageCount} dependency manifests; excluded Lab, fixtures and deferred SDKs.`);

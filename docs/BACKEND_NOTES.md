@@ -47,7 +47,7 @@ Consent response: `{profile:null}` before onboarding, otherwise `{profile:{id,st
 
 Sync response: `{instanceId,taskDate,eligibleSteps:number|null,status:"accepted"|"pending_review",revision,sourceCategory,ruleVersion}`. Pending responses show the previous accepted eligible steps, or null when none exist, and never manufacture zero.
 
-Mission response: `{items:[{id,kind:"daily_steps"|"weekly_consistency",periodStart,ruleVersion,selectedGoal,awardedPoints,eligibleSteps:number|null,cutoffAt,tiers:[{steps,points}],weeklyDaysRequired,weeklyBonusPoints}]}`.
+Mission response (2026-10-05): `{serverNow,taskDate,timezone:"Asia/Hong_Kong",items:[{id,kind:"daily_steps"|"weekly_consistency",periodStart,ruleVersion,selectedGoal,awardedPoints,eligibleSteps:number|null,cutoffAt,tiers:[{steps,points}],weeklyDaysRequired,weeklyBonusPoints,qualifyingDates,pendingReview}]}`. Dates are derived from accepted summaries under the pinned weekly goal, with pending review shown separately. See API.md.
 
 Claim response: `{instanceId,addedPoints,dailyAwardedPoints,weeklyAwardedPoints,balance}`. Daily claims also evaluate the dependent weekly bonus. For a weekly-only claim dailyAwardedPoints is zero. Same idempotency key returns the original outcome, so its original balance can be older than a subsequent points-summary response.
 
@@ -160,3 +160,10 @@ pg_ctl -D .local/pg17 stop -m fast
 ```
 
 These commands reset a disposable automated test database, not the separate future device-test environment. Do not stop unknown processes or reuse its trust configuration for a deployed service. Source/dependencies remain available after stopping the test server.
+# Current release migration — 2026-10-05
+
+`202610050002_store_release.sql` follows the existing mission-progress migration. It adds active-account `hl_app_capabilities` / `hl_badges`, an empty release catalogue and `hl_reconcile_redemption`. The real HTTP handler uses the reconciliation RPC instead of `hl_redeem`; direct fresh demo spending requires both owner-controlled `private.system_settings.demo_mode=true` and a `healthloop-local-%` project label. Neither setting is client writable. Existing receipts, cancellation/refunds and same-key reads survive the release migration. Tests explicitly bracket demo accounting fixtures and restore settings rather than relying on an always-open production redemption path.
+
+Badge recognition derives from compensated `mission_instances.awarded_points`; there is no separate badge balance, on-chain proof, additional health upload or spending trigger. Account locking serializes reads with claims, correction and deletion. The capability response is a fixed literal, and strict domain/HTTP/client schemas reject unknown or enabling fields. Do not add an operator dashboard toggle to silently enable deferred providers.
+
+Deploying this migration remotely is still an operator-approved action. Apply schema before the new handler/client; an old server without capabilities leaves the new app's earning controls unavailable while account/privacy support stays accessible. See latest `TEST_EVIDENCE.md` for the disposable database and actual local HTTP runs.

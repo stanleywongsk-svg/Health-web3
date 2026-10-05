@@ -161,8 +161,8 @@ Deno.test('HTTP signed balance reconciles compensation and never exposes negativ
 });
 Deno.test('HTTP demo reward schema preserves server cost and stock and rejects arbitrary redemption amount',async()=>{
   const data={items:[{id:appealId,titleKey:'demo_badge',pointsCost:10,stock:1,isDemo:true}]};
-  assert.equal((await fixture({data}).handler(request('/rewards'))).status,200);
-  assert.equal((await fixture({data:{items:[{...data.items[0],isDemo:false}]}}).handler(request('/rewards'))).status,500);
+  assert.equal((await fixture({demo:true,data}).handler(request('/rewards'))).status,200);
+  assert.equal((await fixture({demo:true,data:{items:[{...data.items[0],isDemo:false}]}}).handler(request('/rewards'))).status,500);
   const f=fixture();assert.equal((await f.handler(request('/redemptions','POST',{rewardId:appealId,idempotencyKey,pointsCost:1}))).status,422);assert.equal(f.calls.length,0);
 });
 Deno.test('HTTP demo review administration is explicitly unsupported before RPC, not a synthetic-response 500',async()=>{
@@ -244,4 +244,56 @@ Deno.test('HTTP does not expose invalid or unrelated notification response field
   }
   const data={...notificationValues,enabled:true,revision:1,updatedAt:createdAt};
   assert.equal((await fixture({data}).handler(request(preferencePath,'POST',{...notificationValues,expectedRevision:0}))).status,500);
+});
+
+Deno.test('HTTP mission progress rejects client identity/date queries before RPC',async()=>{
+  for(const query of ['?userId=victim','?taskDate=2026-09-14','?points=30','?limit=1']){
+    const f=fixture();assert.equal((await f.handler(request(`/missions${query}`))).status,422);assert.equal(f.calls.length,0);
+  }
+});
+Deno.test('HTTP mission progress validates the server snapshot before returning a success',async()=>{
+  const data={serverNow:'2026-10-05T01:00:00Z',taskDate:'2026-10-05',timezone:'Asia/Hong_Kong',items:[]};
+  const f=fixture({data});const response=await f.handler(request('/missions'));
+  assert.equal(response.status,200);assert.deepEqual(await response.json(),{data,requestId:'test-request-id'});assert.equal(f.calls[0]?.name,'hl_missions');
+  for(const invalid of [{...data,taskDate:'2026-10-06'},{items:[]},{...data,healthSamples:[]}]){
+    assert.equal((await fixture({data:invalid}).handler(request('/missions'))).status,500);
+  }
+});
+
+const releasePolicy={policyVersion:'ios-hk-health-points-v1',storefront:'HK',features:{healthActivity:true,points:true,platformBadges:true,walletConnection:false,nftPurchases:false,cryptoRewards:false,rewardedAds:false,inAppPurchases:false,demoRedemptions:false}};
+const releaseBadges={items:[{id:'first_steps',earned:true,earnedOn:'2026-09-18'},{id:'consistent_week',earned:false,earnedOn:null}],evaluatedAt:'2026-09-18T01:00:00Z'};
+Deno.test('HTTP release reads require verified active account and expose only fixed policy or canonical badges',async()=>{
+  for(const [path,name,data] of [['/app/capabilities','hl_app_capabilities',releasePolicy],['/badges','hl_badges',releaseBadges]] as const) {
+    const f=fixture({data});const response=await f.handler(request(path));assert.equal(response.status,200);assert.equal(f.validated,1);
+    assert.deepEqual(f.calls,[{name,args:{}}]);assert.deepEqual((await response.json()).data,data);
+    assert.equal((await fixture({authFail:true}).handler(request(path))).status,401);
+    const deleted=await fixture({rpcError:'ACCOUNT_INACTIVE'}).handler(request(path));assert.equal(deleted.status,403);
+    for(const query of ['?accountId=other','?walletAddress=0x1','?earned=true','?eligibleSteps=7000']) {
+      const forged=fixture();assert.equal((await forged.handler(request(path+query))).status,422);assert.equal(forged.calls.length,0);
+    }
+  }
+});
+Deno.test('HTTP refuses unsupported or privacy-excessive release responses without leaking extra fields',async()=>{
+  for(const [path,data] of [
+    ['/app/capabilities',{...releasePolicy,features:{...releasePolicy.features,nftPurchases:true}}],
+    ['/app/capabilities',{...releasePolicy,walletAddress:'private-value'}],
+    ['/badges',{...releaseBadges,rawHealth:'private-value'}],
+    ['/badges',{...releaseBadges,items:[releaseBadges.items[0],releaseBadges.items[0]]}],
+  ] as const) {
+    const response=await fixture({data}).handler(request(path));assert.equal(response.status,500);assert.equal((await response.text()).includes('private-value'),false);
+  }
+});
+Deno.test('HTTP real release only reconciles legacy redemption and never invokes the spending RPC',async()=>{
+  const body={rewardId:appealId,idempotencyKey};
+  const denied=fixture({rpcError:'NOT_SUPPORTED'});const response=await denied.handler(request('/redemptions','POST',body));
+  assert.equal(response.status,404);assert.deepEqual(denied.calls,[{name:'hl_reconcile_redemption',args:{p_reward_id:appealId,p_idempotency_key:idempotencyKey}}]);
+  const receipt={id:proposalId,status:'demonstration',demoCode:appealId,pointsCost:10};
+  const retry=fixture({data:receipt});assert.equal((await retry.handler(request('/redemptions','POST',body))).status,200);assert.equal(retry.calls[0]?.name,'hl_reconcile_redemption');
+  const local=fixture({demo:true,data:receipt});assert.equal((await local.handler(request('/redemptions','POST',body))).status,200);assert.equal(local.calls[0]?.name,'hl_redeem');
+  const catalog=fixture({data:{items:[]}});assert.equal((await catalog.handler(request('/rewards'))).status,200);assert.equal(catalog.calls[0]?.name,'hl_release_rewards');
+});
+
+Deno.test('HTTP demo backend cannot attest the shipping release policy',async()=>{
+  const demo=fixture({demo:true,data:releasePolicy});const response=await demo.handler(request('/app/capabilities'));
+  assert.equal(response.status,404);assert.equal((await response.json()).error.code,'NOT_SUPPORTED');assert.equal(demo.calls.length,0);
 });

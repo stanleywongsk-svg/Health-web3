@@ -2,6 +2,8 @@ import { t } from '../i18n';
 export function errorMessage(error:unknown,fallback:string):string {
   const code=error&&typeof error==='object'&&'code' in error?String(error.code):'';
   switch(code){
+    case 'RELEASE_POLICY_REQUIRED':return t('releaseUnavailable');
+    case 'NOT_SUPPORTED':return t('legacyRequestNotCommitted');
     case 'PREFERENCES_CONFLICT':return t('reminderConflict');
     case 'PREFERENCES_REFRESH_REQUIRED':return t('reminderRefreshNeeded');
     case 'INVALID_REMINDER_TIME':return t('reminderInvalid');

@@ -11,7 +11,49 @@
     ],
     "ios": {
       "bundleIdentifier": "com.healthloop.app",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "privacyManifests": {
+        "NSPrivacyTracking": false,
+        "NSPrivacyTrackingDomains": [],
+        "NSPrivacyCollectedDataTypes": [
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeEmailAddress",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeUserID",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeFitness",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeOtherUserContent",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeProductInteraction",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeOtherDataTypes",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          }
+        ]
+      }
     },
     "plugins": [
       "expo-secure-store",

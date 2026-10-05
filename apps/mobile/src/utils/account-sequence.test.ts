@@ -1,6 +1,15 @@
 import { expect, it, vi } from 'vitest';
-import { runAccountSequence, runDeletionSequence } from './account-sequence';
+import { createSnapshotGate, runAccountSequence, runDeletionSequence } from './account-sequence';
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}};
+it('does not republish earlier accounting after a delayed compound reload loses to a mutation',async()=>{
+  const gate=createSnapshotGate();const badgeRead=deferred();let balance=10;const stillCurrent=gate.beginRead();
+  const oldReload=Promise.all([Promise.resolve(10),badgeRead.promise]).then(([olderBalance])=>{if(stillCurrent())balance=olderBalance});
+  expect(balance).toBe(10);gate.invalidate();balance=30;badgeRead.resolve();await oldReload;expect(balance).toBe(30);
+});
+it('newer snapshots and account clearing supersede prior reads without disabling future reads',()=>{
+  const gate=createSnapshotGate();const first=gate.beginRead();const second=gate.beginRead();expect(first()).toBe(false);expect(second()).toBe(true);
+  gate.invalidate();expect(second()).toBe(false);expect(gate.beginRead()()).toBe(true);
+});
 it('does not withdraw B or delete B after account A local-withdrawal storage finishes late',async()=>{
   let account='a';const storage=deferred();const withdrawCloud=vi.fn(async()=>{});const deleteRemote=vi.fn(async()=>{});
   const operation=runAccountSequence([async()=>{},()=>storage.promise,withdrawCloud,deleteRemote],()=>account==='a');

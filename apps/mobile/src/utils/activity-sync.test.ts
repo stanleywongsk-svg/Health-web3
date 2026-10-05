@@ -4,6 +4,8 @@ import { CoreApiError } from '@healthloop/api-client';
 import { aggregateSteps, type SourcePin, type StepSample } from '@healthloop/health-provider';
 import type { ActivitySyncInput } from '@healthloop/domain';
 import { createActivitySyncCoordinator, latestEligibleObservation, prepareActivitySummary } from './activity-sync';
+import { ReleaseController } from './release-controller';
+import { IOS_RELEASE_POLICY } from '@healthloop/domain';
 
 const taskDate = '2026-09-18';
 const pin: SourcePin = { sourceId: 'local-private-phone-id', sourceCategory: 'apple_phone', sourcePolicy: 'single-approved-source-v1', pinToken: '5db51717-5b8d-4a6a-b0ae-7479cffd4c0d' };
@@ -14,7 +16,7 @@ function api() {
   return {
     syncActivity: vi.fn(async (_input: ActivitySyncInput, _signal?: AbortSignal) => ({ ...syncResponse })),
     claimMission: vi.fn(async (_instance: string, _key: string, _signal?: AbortSignal) => ({ ...claimResponse })),
-    getMissions: vi.fn(async (_signal?: AbortSignal) => ({ items: [] })),
+    getMissions: vi.fn(async (_signal?: AbortSignal) => ({ items: [], serverNow: '2026-09-18T01:00:00Z', taskDate, timezone: 'Asia/Hong_Kong' as const })),
     getPointsSummary: vi.fn(async (_signal?: AbortSignal) => ({ balance: 10, correctionPoints: 0, availablePoints: 10, pendingEvaluations: 0, earnedPoints: 10, spentPoints: 0, reversedPoints: 0 })),
     getLedger: vi.fn(async (_page: { limit?: number; cursor?: string } = {}, _signal?: AbortSignal) => ({ items: [{ id: '1', kind: 'daily_award' as const, points: 10, createdAt: '2026-09-18T01:01:00Z', instanceId: syncResponse.instanceId, adjustmentId: null, relatedEntryId: null }], nextCursor: null })),
   };
@@ -45,6 +47,28 @@ describe('minimum activity summary preparation', () => {
 });
 
 describe('activity sync coordinator', () => {
+  it('blocks uploads before transport when release capability verification is pending',async()=>{
+    const release=new ReleaseController({getCapabilities:vi.fn(),getBadges:vi.fn()});release.setContext('account-a',true);
+    const client=api();const flow=createActivitySyncCoordinator({api:client,randomUUID,assertMutationAllowed:()=>release.assertEarningAllowed()});flow.setContext({accountId:'account-a',cloudSync:true});
+    await expect(flow.submit(input())).rejects.toMatchObject({code:'RELEASE_POLICY_REQUIRED'});expect(client.syncActivity).not.toHaveBeenCalled();expect(client.claimMission).not.toHaveBeenCalled();
+  });
+  it.each(['loading','mismatch','unavailable'])('rechecks policy before sync advances to claim while capability status is %s',async state=>{
+    const releaseApi={getCapabilities:vi.fn(async()=>IOS_RELEASE_POLICY),getBadges:vi.fn(async()=>({items:[],evaluatedAt:'2026-09-18T01:00:00Z'}))};
+    const release=new ReleaseController(releaseApi);release.setContext('account-a',true);await release.refresh();
+    const client=api();const response=deferred<typeof syncResponse>();client.syncActivity.mockReturnValueOnce(response.promise);
+    const stableKey=randomUUID();const createKey=vi.fn(()=>stableKey);const flow=createActivitySyncCoordinator({api:client,randomUUID:createKey,assertMutationAllowed:()=>release.assertEarningAllowed()});flow.setContext({accountId:'account-a',cloudSync:true});
+    const pending=flow.submit(input());while(client.syncActivity.mock.calls.length===0)await Promise.resolve();
+    const policyResponse=deferred<typeof IOS_RELEASE_POLICY>();
+    if(state==='loading')releaseApi.getCapabilities.mockReturnValueOnce(policyResponse.promise);
+    else if(state==='mismatch')releaseApi.getCapabilities.mockResolvedValueOnce({...IOS_RELEASE_POLICY,storefront:'US'} as unknown as typeof IOS_RELEASE_POLICY);
+    else releaseApi.getCapabilities.mockRejectedValueOnce(new CoreApiError('TIMEOUT',0));
+    const refreshed=release.refresh().catch(()=>undefined);if(state!=='loading')await refreshed;
+    response.resolve(syncResponse);await expect(pending).rejects.toMatchObject({code:'RELEASE_POLICY_REQUIRED'});
+    expect(client.claimMission).not.toHaveBeenCalled();expect(flow.pending(taskDate)?.stage).toBe('claim');
+    await expect(flow.retry(taskDate)).rejects.toMatchObject({code:'RELEASE_POLICY_REQUIRED'});expect(createKey).toHaveBeenCalledOnce();
+    if(state==='loading'){policyResponse.resolve(IOS_RELEASE_POLICY);await refreshed}else await release.refresh();
+    await flow.retry(taskDate);expect(client.syncActivity).toHaveBeenCalledOnce();expect(client.claimMission).toHaveBeenCalledExactlyOnceWith(syncResponse.instanceId,stableKey,expect.any(AbortSignal));
+  });
   it('returns only canonical refreshed points and ledger, not the claim balance', async () => {
     const { client, flow } = fixture(); const result = await flow.submit(input());
     expect(result.points.availablePoints).toBe(10); expect(result.claim?.balance).toBe(99);

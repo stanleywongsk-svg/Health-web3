@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID, createHash } from 'node:crypto';
 
-export async function runAppealAdjustmentTests({ admin, pool, rpc, session, user, clock, sync, check, rejected }) {
+export async function runAppealAdjustmentTests({ admin, pool, rpc, session, user, clock, sync, check, rejected, withDemoRedemptions }) {
+  const demoRedeem=(id,args)=>withDemoRedemptions(()=>rpc(id,'hl_redeem',args));
   const mfa = { aal:'aal2' };
   const reason = 'Existing pending revision reviewed against the submitted summary.';
   const decisionReason = 'A second reviewer confirms the bounded correction and its effects.';
@@ -112,15 +113,15 @@ export async function runAppealAdjustmentTests({ admin, pool, rpc, session, user
     await clock('2026-09-14T09:00:00Z'); const {operator,reviewer}=await actors(), f=await week();
     const reward=randomUUID(), redeemKey=randomUUID();
     await admin.query("insert into public.reward_catalog(id,title_key,points_cost,stock) values($1,'rewards.demo',100,2)",[reward]);
-    const redemption=await rpc(f.subject,'hl_redeem',[reward,redeemKey]);
+    const redemption=await demoRedeem(f.subject,[reward,redeemKey]);
     const proposal=await propose(operator,f.appeal), key=randomUUID();
     const result=await decision(reviewer,proposal,'approve',key);
     assert.equal(result.dailyDelta,-30); assert.equal(result.weeklyDelta,-20); assert.equal(result.balance,-40); assert.equal(result.availablePoints,0);
     assert.deepEqual(await decision(reviewer,proposal,'approve',key),result);
     const totals=await rpc(f.subject,'hl_points_summary');
     assert.deepEqual([totals.balance,totals.availablePoints,totals.earnedPoints,totals.spentPoints,totals.correctionPoints,totals.reversedPoints],[-40,0,110,100,-50,0]);
-    await rejected(()=>rpc(f.subject,'hl_redeem',[reward,randomUUID()]),'INSUFFICIENT_POINTS');
-    assert.deepEqual(await rpc(f.subject,'hl_redeem',[reward,redeemKey]),redemption);
+    await rejected(()=>demoRedeem(f.subject,[reward,randomUUID()]),'INSUFFICIENT_POINTS');
+    assert.deepEqual(await demoRedeem(f.subject,[reward,redeemKey]),redemption);
     const ledger=(await rpc(f.subject,'hl_ledger')).items, corrected=ledger.filter(l=>l.adjustmentId===proposal.id);
     assert.equal(corrected.length,2); assert.ok(corrected.every(l=>l.relatedEntryId!==null));
     assert.equal(ledger.reduce((sum,l)=>sum+l.points,0),-40);
@@ -216,13 +217,13 @@ export async function runAppealAdjustmentTests({ admin, pool, rpc, session, user
   await check('redemption racing correction spends at most the pre-correction amount atomically',async()=> {
     const f=await pending(), {operator,reviewer}=await actors(), q=await propose(operator,f.appeal), reward=randomUUID();
     await admin.query("insert into public.reward_catalog(id,title_key,points_cost,stock) values($1,'rewards.demo',30,1)",[reward]);
-    const results=await Promise.allSettled([decision(reviewer,q),rpc(f.subject,'hl_redeem',[reward,randomUUID()])]);
+    const results=await Promise.allSettled([decision(reviewer,q),demoRedeem(f.subject,[reward,randomUUID()])]);
     assert.equal(results[0].status,'fulfilled');
     if(results[1].status==='rejected') assert.equal(results[1].reason.message,'INSUFFICIENT_POINTS');
     const spent=results[1].status==='fulfilled';
     const total=await rpc(f.subject,'hl_points_summary'); assert.equal(total.balance,spent?-30:0); assert.equal(total.availablePoints,0);
     assert.equal((await admin.query('select stock from public.reward_catalog where id=$1',[reward])).rows[0].stock,spent?0:1);
-    await rejected(()=>rpc(f.subject,'hl_redeem',[reward,randomUUID()]),spent?'OUT_OF_STOCK':'INSUFFICIENT_POINTS');
+    await rejected(()=>demoRedeem(f.subject,[reward,randomUUID()]),spent?'OUT_OF_STOCK':'INSUFFICIENT_POINTS');
   });
   await check('failed weekly posting rolls back daily posting, accepted revision, audit and decision',async()=> {
     await clock('2026-09-14T09:00:00Z'); const {operator,reviewer}=await actors(), f=await week(), q=await propose(operator,f.appeal), key=randomUUID();
@@ -240,13 +241,13 @@ export async function runAppealAdjustmentTests({ admin, pool, rpc, session, user
   await check('withdrawal still permits exact redemption recovery and refund, but no new spend',async()=> {
     const f=await pending(), reward=randomUUID(), key=randomUUID();
     await admin.query("insert into public.reward_catalog(id,title_key,points_cost,stock) values($1,'rewards.demo',10,2)",[reward]);
-    const receipt=await rpc(f.subject,'hl_redeem',[reward,key]);
+    const receipt=await demoRedeem(f.subject,[reward,key]);
     await rpc(f.subject,'hl_set_consents',[true,true,false,false,'2026-09-18']);
-    assert.deepEqual(await rpc(f.subject,'hl_redeem',[reward,key]),receipt);
-    await rejected(()=>rpc(f.subject,'hl_redeem',[reward,randomUUID()]),'CONSENT_REQUIRED');
+    assert.deepEqual(await demoRedeem(f.subject,[reward,key]),receipt);
+    await rejected(()=>demoRedeem(f.subject,[reward,randomUUID()]),'CONSENT_REQUIRED');
     await rpc(f.subject,'hl_cancel_redemption',[receipt.id]);
     assert.equal((await rpc(f.subject,'hl_points_summary')).balance,30);
-    assert.equal((await rpc(f.subject,'hl_redeem',[reward,key])).status,'cancelled');
+    assert.equal((await demoRedeem(f.subject,[reward,key])).status,'cancelled');
   });
   await check('deletion racing approval removes review data; old subject and admin JWTs stay blocked',async()=> {
     const f=await pending(), {operator,reviewer}=await actors(), q=await propose(operator,f.appeal), key=randomUUID();

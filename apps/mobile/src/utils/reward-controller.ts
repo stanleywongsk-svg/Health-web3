@@ -18,7 +18,7 @@ function parseIntent(value:string):Intent {
   if(input.kind==='cancel'&&uuid.test(input.redemptionId??'')&&Object.keys(input).every(key=>['version','kind','stage','redemptionId'].includes(key)))return input as Intent;
   throw new CoreApiError('LOCAL_STATE_ERROR',0);
 }
-const rejectedWithoutCommit=new Set(['INSUFFICIENT_POINTS','OUT_OF_STOCK','REWARDS_PAUSED','NOT_FOUND','INVALID_INPUT','IDEMPOTENCY_CONFLICT']);
+const rejectedWithoutCommit=new Set(['INSUFFICIENT_POINTS','OUT_OF_STOCK','REWARDS_PAUSED','NOT_FOUND','INVALID_INPUT','IDEMPOTENCY_CONFLICT','NOT_SUPPORTED']);
 
 /** Real server operations only. Durable intents contain IDs, never codes or health values. */
 export class RewardController {

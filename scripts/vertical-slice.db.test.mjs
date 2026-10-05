@@ -6,12 +6,13 @@
  */
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { createCoreClient } from '../packages/api-client/src/index.ts';
 import { createCoreHandler } from '../supabase/functions/core/handler.ts';
 import { SyntheticHealthProvider } from '../packages/health-provider/src/synthetic.ts';
 import { aggregateSteps } from '../packages/health-provider/src/aggregation.ts';
 import { createActivitySyncCoordinator, latestEligibleObservation, prepareActivitySummary } from '../apps/mobile/src/utils/activity-sync.ts';
+import { createMissionClaimRecovery } from '../apps/mobile/src/utils/mission-claim.ts';
 import { RewardController } from '../apps/mobile/src/utils/reward-controller.ts';
 import { ReminderController } from '../apps/mobile/src/utils/reminder-controller.ts';
 
@@ -32,6 +33,10 @@ const fixedTime = '2026-09-18T01:00:00Z';
 const consent = { adultConfirmed: true, localRead: true, cloudSync: true, marketing: false, version: '2026-09-18' };
 // This explicit list prevents the injected transport from invoking arbitrary SQL identifiers.
 const rpcArguments = Object.freeze({
+  hl_app_capabilities: [],
+  hl_badges: [],
+  hl_release_rewards: [],
+  hl_reconcile_redemption: ['p_reward_id', 'p_idempotency_key'],
   hl_consents: [],
   hl_set_consents: ['p_adult_confirmed', 'p_local_read', 'p_cloud_sync', 'p_marketing', 'p_version'],
   hl_notification_preferences: [],
@@ -88,6 +93,11 @@ function requestClient(boundToken) {
     },
   };
 }
+const handlerConfig={
+  url: 'http://127.0.0.1:54321', anonKey: 'synthetic-test-placeholder',
+  environment: 'test', buildMode: 'real', projectLabel: 'healthloop-real-local-integration', allowedOrigins: [],
+};
+const demoHandler=createCoreHandler({...handlerConfig,buildMode:'demo',projectLabel:'healthloop-local-integration'},{client:requestClient,requestId:randomUUID});
 const handler = createCoreHandler({
   url: 'http://127.0.0.1:54321', anonKey: 'synthetic-test-placeholder',
   environment: 'test', buildMode: 'real', projectLabel: 'healthloop-real-local-integration', allowedOrigins: [],
@@ -101,7 +111,7 @@ function apiFor(token, options = {}) {
       const request = new Request(url, init);
       const path = new URL(request.url).pathname;
       if (options.requests) options.requests.push({ path, body: init.body ? JSON.parse(init.body) : null });
-      const response = await handler(request);
+      const response = await (options.demo ? demoHandler : handler)(request);
       options.afterResponse?.(path, response);
       // The database has committed before this injected network loss. It is not
       // a fake backend response: retry must reconcile the actual posted ledger.
@@ -157,6 +167,80 @@ afterAll(async () => {
 });
 
 describe('synthetic client → real Edge handler → real PostgreSQL RPC', () => {
+  it('reads the fixed active-account release policy and canonical badges without enabling providers or health uploads',async()=>{
+    const account=await user();
+    await expect(account.api.getCapabilities()).rejects.toMatchObject({code:'ONBOARDING_REQUIRED'});
+    await account.api.setConsents({...consent,localRead:false,cloudSync:false});
+    const policy=await account.api.getCapabilities();
+    expect(policy).toEqual({policyVersion:'ios-hk-health-points-v1',storefront:'HK',features:{healthActivity:true,points:true,platformBadges:true,walletConnection:false,nftPurchases:false,cryptoRewards:false,rewardedAds:false,inAppPurchases:false,demoRedemptions:false}});
+    const badges=await account.api.getBadges();
+    expect(badges.items).toEqual([{id:'first_steps',earned:false,earnedOn:null},{id:'consistent_week',earned:false,earnedOn:null}]);
+    expect(Date.parse(badges.evaluatedAt)).toBe(Date.parse(fixedTime));
+    expect((await account.api.getLedger()).items).toEqual([]);
+    expect((await pool.query('select count(*)::int n from public.activity_submissions where user_id=$1',[account.id])).rows[0].n).toBe(0);
+    await withDemoRedemptions(async()=>{
+      expect(await account.api.getCapabilities()).toEqual(policy);
+      expect(await account.api.getRewards()).toEqual({items:[]});
+      await expect(account.api.redeemReward({rewardId:randomUUID(),idempotencyKey:randomUUID()})).rejects.toMatchObject({code:'NOT_SUPPORTED',status:404});
+    });
+    await pool.query("update public.profiles set status='deletion_requested' where id=$1",[account.id]);
+    await expect(account.api.getBadges()).rejects.toMatchObject({code:'ACCOUNT_INACTIVE',status:403});
+    await expect(account.api.getCapabilities()).rejects.toMatchObject({code:'ACCOUNT_INACTIVE',status:403});
+  });
+  it('recognizes posted activity, isolates another account, and keeps legacy receipt replay/refund without new real-build spending',async()=>{
+    const account=await fundedUser(),other=await user();await other.api.setConsents(consent);
+    expect((await account.api.getBadges()).items).toEqual([{id:'first_steps',earned:true,earnedOn:'2026-09-18'},{id:'consistent_week',earned:false,earnedOn:null}]);
+    expect((await other.api.getBadges()).items.every(item=>!item.earned)).toBe(true);
+    const rewardId=await demoReward(),idempotencyKey=randomUUID();
+    await expect(account.api.redeemReward({rewardId,idempotencyKey})).rejects.toMatchObject({code:'NOT_SUPPORTED'});
+    expect((await account.api.getPointsSummary()).balance).toBe(30);
+    const legacy=await withDemoRedemptions(()=>apiFor(account.token,{demo:true}).redeemReward({rewardId,idempotencyKey}));
+    await account.api.setConsents({...consent,cloudSync:false});
+    expect(await account.api.redeemReward({rewardId,idempotencyKey})).toEqual(legacy);
+    await expect(other.api.redeemReward({rewardId,idempotencyKey})).rejects.toMatchObject({code:'NOT_SUPPORTED'});
+    await expect(account.api.redeemReward({rewardId,idempotencyKey:randomUUID()})).rejects.toMatchObject({code:'NOT_SUPPORTED'});
+    await account.api.cancelRedemption(legacy.id);await account.api.cancelRedemption(legacy.id);
+    expect((await account.api.getPointsSummary()).balance).toBe(30);
+    expect((await account.api.getLedger()).items.filter(entry=>entry.kind==='refund')).toHaveLength(1);
+    expect((await account.api.redeemReward({rewardId,idempotencyKey})).status).toBe('cancelled');
+    expect((await account.api.getBadges()).items[0].earned).toBe(true);
+  });
+  it('recovers a server-accepted mission after response loss without another activity upload or award', async () => {
+    const { api, token } = await user();
+    await api.setConsents(consent);
+    const accepted = await api.syncActivity(summary(5000));
+    let drop = true; const requests = [];
+    const transport = apiFor(token, { requests, dropSuccessfulResponse: (path) => {
+      if (drop && path.endsWith('/claim')) { drop = false; return true; }
+      return false;
+    } });
+    const recovery = createMissionClaimRecovery(transport, randomUUID);
+    recovery.setAccount('synthetic-local-owner');
+    const signal = new AbortController().signal;
+    await expect(recovery.claim(accepted.instanceId, signal)).rejects.toMatchObject({ code: 'NETWORK_ERROR' });
+    await recovery.claim(accepted.instanceId, signal);
+    // Repeating while canonical refresh has failed does not repost a known result.
+    await recovery.claim(accepted.instanceId, signal);
+    expect(requests.length).toBe(2);
+    expect(requests[0].body.idempotencyKey).toBe(requests[1].body.idempotencyKey);
+    expect(requests.every(request => request.path.endsWith('/claim'))).toBe(true);
+    expect((await api.getLedger()).items).toHaveLength(1);
+    expect((await api.getPointsSummary()).availablePoints).toBe(20);
+    expect((await api.getMissions()).items.find(m => m.id === accepted.instanceId).awardedPoints).toBe(20);
+  });
+  it('returns canonical earning progress from authenticated SQL through the strict HTTP/client contract', async () => {
+    const { api } = await user();
+    await api.setConsents(consent);
+    const before = await api.getMissions();
+    expect(before).toMatchObject({ taskDate: '2026-09-18', timezone: 'Asia/Hong_Kong' });
+    expect(before.items.find(m => m.kind === 'daily_steps')).toMatchObject({ eligibleSteps: null, awardedPoints: 0, pendingReview: false });
+    const accepted = await api.syncActivity(summary(5000));
+    const synced = await api.getMissions();
+    expect(synced.items.find(m => m.id === accepted.instanceId)).toMatchObject({ eligibleSteps: 5000, awardedPoints: 0 });
+    expect(synced.items.find(m => m.kind === 'weekly_consistency').qualifyingDates).toEqual(['2026-09-18']);
+    await api.claimMission(accepted.instanceId, randomUUID());
+    expect((await api.getMissions()).items.find(m => m.id === accepted.instanceId).awardedPoints).toBe(20);
+  });
   it('completes onboarding, summary sync, daily claim and reconciled typed ledger', async () => {
     const { id, api } = await user();
     expect(await api.getConsents()).toEqual({ profile: null });
@@ -309,13 +393,27 @@ async function fundedUser(steps = 7000) {
   return { ...account, sourcePinToken: input.sourcePinToken };
 }
 
-describe('demonstration reward client → Edge → PostgreSQL', () => {
+// Only the disposable DB owner can transition these isolated legacy/demo fixtures.
+async function setDemoRedemptionFixture(enabled) {
+  await pool.query('update private.system_settings set demo_mode=$1,project_label=$2',[enabled,enabled?'healthloop-local-integration':'healthloop-real-local-integration']);
+}
+async function withDemoRedemptions(action) {
+  await setDemoRedemptionFixture(true);
+  try { return await action(); } finally { await setDemoRedemptionFixture(false); }
+}
+async function fundedDemoUser() {
+  const account=await fundedUser();
+  return {...account,api:apiFor(account.token,{demo:true})};
+}
+
+describe('isolated demonstration reward client → demo Edge → PostgreSQL', () => {
+  afterEach(async()=>{await setDemoRedemptionFixture(false);});
   it('runs the shipped mobile controller through restart recovery and consent-withdrawn refund against real SQL', async () => {
-    const account = await fundedUser(); const rewardId = await demoReward();
+    const account = await fundedDemoUser(); const rewardId = await demoReward();await setDemoRedemptionFixture(true);
     const values = new Map();
     const storage = { getItem: async key => values.get(key) ?? null, setItem: async (key, value) => { values.set(key, value); }, removeItem: async key => { values.delete(key); } };
     let dropped = false; const requests = [];
-    const unreliable = apiFor(account.token, { requests, dropSuccessfulResponse(path, method) {
+    const unreliable = apiFor(account.token, { demo:true, requests, dropSuccessfulResponse(path, method) {
       if (!dropped && method === 'POST' && path.endsWith('/redemptions')) { dropped = true; return true; }
       return false;
     } });
@@ -350,10 +448,10 @@ describe('demonstration reward client → Edge → PostgreSQL', () => {
   });
 
   it('recovers a committed redemption response loss using the same key and canonical balance, stock and history', async () => {
-    const account = await fundedUser();
-    const rewardId = await demoReward(10, 1); const idempotencyKey = randomUUID();
+    const account = await fundedDemoUser();
+    const rewardId = await demoReward(10, 1); const idempotencyKey = randomUUID();await setDemoRedemptionFixture(true);
     let dropped = false; const requests = [];
-    const unreliable = apiFor(account.token, { requests, dropSuccessfulResponse(path) {
+    const unreliable = apiFor(account.token, { demo:true, requests, dropSuccessfulResponse(path) {
       if (!dropped && path.endsWith('/redemptions')) { dropped = true; return true; }
       return false;
     } });
@@ -377,7 +475,7 @@ describe('demonstration reward client → Edge → PostgreSQL', () => {
   });
 
   it('refunds once after cloud consent withdrawal without granting new rewards or revealing another account code', async () => {
-    const a = await fundedUser(); const b = await fundedUser(); const rewardId = await demoReward();
+    const a = await fundedDemoUser(); const b = await fundedDemoUser(); const rewardId = await demoReward();await setDemoRedemptionFixture(true);
     const idempotencyKey = randomUUID();
     const redeemed = await a.api.redeemReward({ rewardId, idempotencyKey });
     expect((await b.api.getRedemptions()).items).toEqual([]);
@@ -394,7 +492,7 @@ describe('demonstration reward client → Edge → PostgreSQL', () => {
   });
 
   it('serializes competing clients for the final demonstration item without charging the loser', async () => {
-    const a = await fundedUser(); const b = await fundedUser(); const rewardId = await demoReward();
+    const a = await fundedDemoUser(); const b = await fundedDemoUser(); const rewardId = await demoReward();await setDemoRedemptionFixture(true);
     const results = await Promise.allSettled([a.api.redeemReward({ rewardId, idempotencyKey: randomUUID() }), b.api.redeemReward({ rewardId, idempotencyKey: randomUUID() })]);
     expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
     const failure = results.find(result => result.status === 'rejected');
@@ -430,7 +528,8 @@ describe('two-person appeal client → Edge → PostgreSQL (synthetic Auth and M
         await subject.api.claimMission(accepted.instanceId, randomUUID());
       }
       expect((await subject.api.getPointsSummary()).balance).toBe(50);
-      await subject.api.redeemReward({ rewardId: await demoReward(40), idempotencyKey: randomUUID() });
+      expect((await subject.api.getBadges()).items).toEqual([{id:'first_steps',earned:true,earnedOn:'2026-09-16'},{id:'consistent_week',earned:true,earnedOn:'2026-09-14'}]);
+      await withDemoRedemptions(async()=>apiFor(subject.token,{demo:true}).redeemReward({ rewardId: await demoReward(40), idempotencyKey: randomUUID() }));
       expect(await subject.api.syncActivity(summary(0, 2, pin))).toMatchObject({ status: 'pending_review' });
       const appeal = await subject.api.createAppeal({ taskDate: '2026-09-18', reason: 'Synthetic fixture: review a downward revision.' });
       const ownAppeals = await subject.api.getAppeals();
@@ -455,6 +554,7 @@ describe('two-person appeal client → Edge → PostgreSQL (synthetic Auth and M
       await expect(reviewer.api.decideAppeal(proposal.id, { ...decisionInput, reason: 'Synthetic fixture: changed replay is not allowed.' })).rejects.toMatchObject({ code: 'IDEMPOTENCY_CONFLICT', status: 409 });
       const points = await subject.api.getPointsSummary();
       expect(points).toMatchObject({ earnedPoints: 50, correctionPoints: -30, balance: -20, availablePoints: 0, spentPoints: 40 });
+      expect((await subject.api.getBadges()).items).toEqual([{id:'first_steps',earned:true,earnedOn:'2026-09-16'},{id:'consistent_week',earned:false,earnedOn:null}]);
       const entries = (await subject.api.getLedger({ limit: 100 })).items;
       const corrections = entries.filter(entry => entry.kind.endsWith('_correction'));
       expect(corrections).toHaveLength(2);
@@ -465,7 +565,7 @@ describe('two-person appeal client → Edge → PostgreSQL (synthetic Auth and M
       expect(entries.reduce((sum, entry) => sum + entry.points, 0)).toBe(points.balance);
       expect((await subject.api.getAppeals()).items.find(item => item.id === appeal.id)).toMatchObject({ status: 'resolved', proposals: [expect.objectContaining({ status: 'approved' })] });
       expect((await subject.api.getHealthSummary()).items.find(item => item.taskDate === '2026-09-18')).toMatchObject({ eligibleSteps: 0, revision: 2 });
-      await expect(subject.api.redeemReward({ rewardId: await demoReward(), idempotencyKey: randomUUID() })).rejects.toMatchObject({ code: 'INSUFFICIENT_POINTS', status: 409 });
+      await withDemoRedemptions(async()=>{await expect(apiFor(subject.token,{demo:true}).redeemReward({ rewardId: await demoReward(), idempotencyKey: randomUUID() })).rejects.toMatchObject({ code: 'INSUFFICIENT_POINTS', status: 409 });});
       const stranger = await user(); await stranger.api.setConsents(consent);
       expect((await stranger.api.getAppeals()).items).toEqual([]);
     } finally { await fixtureClock(); }

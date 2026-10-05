@@ -1,5 +1,5 @@
 import { activitySyncSchema, epochMilliseconds, taskDayBounds, type ActivitySyncInput } from '@healthloop/domain';
-import { CoreApiError, type ClaimResult, type CoreClient, type LedgerPage, type Mission, type PointsSummary } from '@healthloop/api-client';
+import { CoreApiError, type ClaimResult, type CoreClient, type LedgerPage, type MissionsResult, type PointsSummary } from '@healthloop/api-client';
 import type { SourcePin, StepAggregation, StepSample } from '@healthloop/health-provider';
 
 /** Derive observation time from eligible samples for the pinned source, never fetch time. */
@@ -39,7 +39,7 @@ type SyncApi = Pick<CoreClient, 'syncActivity' | 'claimMission' | 'getMissions' 
 export type SyncStage = 'sync' | 'claim' | 'refresh';
 export interface ActivitySyncResult {
   status: SyncResponse['status']; sync: SyncResponse; claim: ClaimResult | null;
-  missions: Mission[]; points: PointsSummary; ledger: LedgerPage;
+  missions: MissionsResult; points: PointsSummary; ledger: LedgerPage;
 }
 export interface PendingActivitySync { taskDate: string; revision: number; stage: SyncStage }
 interface Pending {
@@ -56,7 +56,7 @@ const cancelled = () => new CoreApiError('CANCELLED', 0);
  * Persist only a revision counter outside this coordinator; after process restart,
  * reconcile its next value with the server's accepted revision before submitting.
  */
-export function createActivitySyncCoordinator(dependencies: { api: SyncApi; randomUUID: () => string }) {
+export function createActivitySyncCoordinator(dependencies: { api: SyncApi; randomUUID: () => string; assertMutationAllowed?: () => void }) {
   let accountId: string | null = null; let cloudSync = false; let paused = false; let generation = 0;
   const pendingByDay = new Map<string, Pending>();
 
@@ -95,12 +95,15 @@ export function createActivitySyncCoordinator(dependencies: { api: SyncApi; rand
       const operation = Promise.resolve().then(async (): Promise<ActivitySyncResult> => {
         current(pending, controller);
         if (pending.stage === 'sync') {
+          dependencies.assertMutationAllowed?.();
           const response = await dependencies.api.syncActivity({ ...pending.input }, controller.signal);
           current(pending, controller);
           pending.sync = response; pending.stage = response.status === 'accepted' ? 'claim' : 'refresh';
         }
         if (!pending.sync) throw new CoreApiError('INVALID_RESPONSE', 0);
         if (pending.stage === 'claim') {
+          // Capability revalidation may have started while activity synchronization was in flight.
+          dependencies.assertMutationAllowed?.();
           const response = await dependencies.api.claimMission(pending.sync.instanceId, pending.key, controller.signal);
           current(pending, controller);
           pending.claim = response; pending.stage = 'refresh';
@@ -110,7 +113,7 @@ export function createActivitySyncCoordinator(dependencies: { api: SyncApi; rand
           dependencies.api.getMissions(controller.signal), dependencies.api.getPointsSummary(controller.signal), dependencies.api.getLedger({}, controller.signal),
         ]);
         current(pending, controller);
-        const result: ActivitySyncResult = { status: pending.sync.status, sync: pending.sync, claim: pending.claim, missions: missions.items, points, ledger };
+        const result: ActivitySyncResult = { status: pending.sync.status, sync: pending.sync, claim: pending.claim, missions, points, ledger };
         pendingByDay.delete(pending.input.taskDate);
         return result;
       }).catch((error: unknown) => {

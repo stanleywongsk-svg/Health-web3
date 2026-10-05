@@ -1,1 +1,4 @@
-export const theme = { bg:'#F3F8F6', card:'#FFFFFF', ink:'#133E38', muted:'#617B74', primary:'#087F70', pale:'#E3F3ED', line:'#DCE8E2', warning:'#805918', danger:'#A43838' };
+export const theme = {
+  bg:'#F5F7F3', card:'#FFFFFF', ink:'#193E35', muted:'#596F65', primary:'#13765C',
+  pale:'#E8F3EB', line:'#E0E7DF', warning:'#805918', danger:'#A43838',
+};

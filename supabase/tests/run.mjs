@@ -4,6 +4,8 @@ import { readFile, readdir } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 import { runAppealAdjustmentTests } from './appeal-adjustments.mjs';
+import { runStoreReleaseTests } from './store-release.mjs';
+import { runMissionProgressTests } from './mission-progress.mjs';
 import { runNotificationPreferenceTests } from './notification-preferences.mjs';
 const target = process.env.HEALTHLOOP_TEST_DATABASE_URL;
 if (!target) throw new Error('Set HEALTHLOOP_TEST_DATABASE_URL to a disposable local healthloop_test_* database.');
@@ -45,6 +47,14 @@ const pins=new Map();
 async function sync(id,steps=3000,revision=1,day='2026-09-14',extras={}) {
   const key=`${id}:${day}`; if(!pins.has(key)) pins.set(key,randomUUID());
   return rpc(id,'hl_sync_activity',[day,steps,extras.category??'apple_phone',extras.policy??'single-approved-source-v1',extras.pin??pins.get(key),revision,extras.observed??`${day}T01:00:00Z`,'Asia/Hong_Kong']);
+}
+// Owner-only fixture transition: no runtime/client parameter can enable demo spending.
+async function withDemoRedemptions(action) {
+  const settings=(await admin.query('select demo_mode,project_label from private.system_settings')).rows[0];
+  await admin.query("update private.system_settings set demo_mode=true,project_label='healthloop-local-test'");
+  try { return await action(); } finally {
+    await admin.query('update private.system_settings set demo_mode=$1,project_label=$2',[settings.demo_mode,settings.project_label]);
+  }
 }
 try {
   await admin.query('drop schema if exists public cascade; drop schema if exists private cascade; drop schema if exists auth cascade; create schema public; create schema auth;');
@@ -251,7 +261,7 @@ try {
     assert.equal((await rpc(a,'hl_points_summary')).availablePoints,70);
     await rpc(b,'hl_admin_pause',[false,'test incident resolved'],{aal:'aal2'});
   });
-  await check('two users contend for final demo inventory: one debit, one rejection',async()=> {
+  await check('two users contend for final demo inventory: one debit, one rejection',()=>withDemoRedemptions(async()=> {
     const reward=randomUUID(); await admin.query("insert into public.reward_catalog(id,title_key,points_cost,stock) values($1,'rewards.demo',10,1)",[reward]);
     const responses=await Promise.allSettled([rpc(a,'hl_redeem',[reward,randomUUID()]),rpc(b,'hl_redeem',[reward,randomUUID()])]);
     assert.equal(responses.filter(r=>r.status==='fulfilled').length,1);
@@ -267,7 +277,7 @@ try {
     assert.equal(new Set([...firstPage.items,...otherPage.items].map(r=>r.id)).size,3);
     const poor=await user(); await rejected(()=>rpc(poor,'hl_redeem',[reward,randomUUID()]),'INSUFFICIENT_POINTS');
     await rejected(()=>rpc(poor,'hl_cancel_redemption',[redemption.id]),'NOT_FOUND');
-  });
+  }));
   await check('cursor pagination has no duplicate ledger entries and balance reconciles',async()=> {
     const first=await rpc(a,'hl_ledger',[2,null]), second=await rpc(a,'hl_ledger',[100,first.nextCursor]);
     const ids=[...first.items,...second.items].map(r=>r.id); assert.equal(new Set(ids).size,ids.length);
@@ -305,8 +315,10 @@ try {
     assert.equal((await sync(u,3000,1,'2026-09-14',{category:'synthetic_demo',policy:'synthetic-demo-v1'})).status,'accepted');
     await admin.query("update private.system_settings set demo_mode=false,project_label='healthloop-real-unconfigured'");
   });
-  await runAppealAdjustmentTests({ admin,pool,rpc,session,user,clock,sync,check,rejected });
+  await runAppealAdjustmentTests({ admin,pool,rpc,session,user,clock,sync,check,rejected,withDemoRedemptions });
   await runNotificationPreferenceTests({ admin,pool,rpc,session,user,clock,sync,check,rejected });
+  await runStoreReleaseTests({ admin,pool,rpc,session,user,clock,sync,check,rejected,withDemoRedemptions });
+  await runMissionProgressTests({ admin,pool,rpc,session,user,clock,sync,check,rejected });
   console.log(`\n${passed} PostgreSQL integration checks passed; 100-way concurrent claims executed twice, approval replay and preference retry once each.`);
   console.log('Auth JWT claims were injected by the privileged test fixture; this does not verify Supabase Auth/OTP or Edge network delivery.');
 } finally {

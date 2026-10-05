@@ -1,5 +1,7 @@
 # HealthLoop — Codex implementation brief
 
+> Current implementation precedence — 2026-10-05: the user adopted the Hong Kong iOS first-release design in `AGENTS.md` and `docs/APP_STORE_RELEASE_RESEARCH.md`. The native release uses verified activity, noncash points and personal platform achievements. NFT ownership/wallet connection must not unlock functionality or increase rewards; new demonstration-voucher spending is disabled, while existing records/reconciliation/refunds remain supported. Optional closed-loop rewarded ads, StoreKit content and read-only collection display are future integrations requiring working providers and verification, not simulated live features. This amendment supersedes conflicting historical scope below; all 58 requirement IDs and B/C assignments remain unchanged.
+
 You are the senior mobile/full-stack engineer working in this repository. **Build the product described below, including executable code, database migrations, tests and operating documentation. Do not stop at a proposal, wireframe, landing page or mock dashboard.**
 
 This is a persistent implementation specification, not a promise that an entire app can be completed in one model response. Work through verified, end-to-end slices. Continue making safe progress within the available environment, then leave an accurate checkpoint for the next session. There is no fixed delivery date, weekly plan, sprint calendar or required completion duration.

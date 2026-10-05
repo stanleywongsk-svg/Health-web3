@@ -18,10 +18,13 @@ This is an implementation/design record, not a legal opinion or compliance appro
 | Raw sleep intervals / latest heart-rate | Optional local display | Device only | No reward targeting; show units/time; no invented missing readings |
 | Daily eligible steps/date/timezone/source category/policy, opaque source pin, revision journal and observation/receipt times | Server mission evaluation, retries and review | Core PostgreSQL under RLS | Proposed configurable 90-day summary retention; service-only pruning is implemented; scheduling and legal approval required before live service |
 | Mission instance / point ledger | Canonical capped entitlement and audit | Core PostgreSQL under RLS | Integer nontransferable points; append-only financial-style history does not permit indefinite identifiable retention |
+| Habit badge response | Show personal activity achievements | Derived from caller-owned posted mission awards; transient mobile state | No new activity collection or persistent badge table. Corrected entitlements recalculate eligibility; account/offline changes clear visible badges. No NFT, ad or wallet recipient. |
 | Export | User access to their stored data | Authenticated response to device | No public link; transient handling; clear display/export state on account change |
 | Deletion tombstone/job | Prevent old sessions from resuming claims and enable durable purge | Restricted core database | Keep minimum necessary suppression record; completion/backup replay must be verified |
 | Sponsor aggregates (future) | Placement counts | Separate aggregate store | No email/user ID/source pin/wallet/health fields; do not join to core records |
 
 Intended processors: Apple HealthKit (on-device platform), Supabase Auth/PostgreSQL/Edge Functions (local in current tests; hosted provider not provisioned), operator SMTP provider (not selected). No analytics, advertising, crash-reporting or LLM API receives health data in this slice. Package registries and build tooling receive dependency/build requests, not patient data.
+
+The current app-level privacy manifest and proposed App Store Connect mapping are documented in `APP_PRIVACY_DISCLOSURES.md`. Its six linked functionality categories describe current server records, not consent to marketing or approval of future SDKs. A production processor/logging review and approved public privacy policy remain required.
 
 Pending operational implementation: bounded summary/consent retention scheduling, erasure completion, backup expiry/deletion replay, approval of any narrowly justified ledger retention. The service must remain development-only until these obligations and evidence are addressed. Do not collect real records in automated test outputs or upload them to coding tools.

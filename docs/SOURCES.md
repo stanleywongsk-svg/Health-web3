@@ -98,3 +98,19 @@ https://supabase.com/docs/guides/database/postgres/row-level-security
 - Apple HealthKit authorization: https://developer.apple.com/documentation/healthkit/authorizing-access-to-health-data
 
 All default budgets, allocations, mission thresholds, prototype users and performance targets are proposed design inputs, not externally established business results.
+
+## 2026-10-05 UI revision API verification
+
+- [React Native0.83 accessibility](https://reactnative.dev/docs/0.83/accessibility): checked roles, state and numeric/text progress values used by shared controls; runtime VoiceOver acceptance remains open.
+- [React Native0.83 Text](https://reactnative.dev/docs/0.83/text): selectable data text and existing platform text scaling. Navigational row labels stay nonselectable so they do not intercept row taps.
+- [Expo SDK55 UI reference](https://docs.expo.dev/versions/v55.0.0/sdk/ui/): consulted alongside the Native UI skill; no new UI dependency or SDK upgrade introduced.
+- [Expo local development](https://docs.expo.dev/guides/local-app-development/): checked the native development-build workflow. This app retains its custom read-only HealthKit module and is not an Expo Go-only app.
+# Release privacy and submission references — checked 2026-10-05
+
+- Expo SDK 55 app configuration, `ios.privacyManifests`: https://docs.expo.dev/versions/v55.0.0/config/app/
+- Apple privacy manifest collection constants: https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacycollecteddatatypes/nsprivacycollecteddatatype
+- Apple collection purposes: https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacycollecteddatatypes/nsprivacycollecteddatatypepurposes
+- Apple App Privacy definitions: https://developer.apple.com/app-store/app-privacy-details/
+- Apple submission guidance: https://developer.apple.com/app-store/submitting/
+
+These references support the configuration and worksheet, not a declaration that all SDK/processor behavior has been independently audited or Apple has approved the app. The exact six collection constants were checked in Apple's documentation data and the generated Expo plist was inspected. Current crypto/advertising sources and rule-vs-inference distinctions remain in `APP_STORE_RELEASE_RESEARCH.md`.

@@ -1,5 +1,14 @@
 # Decisions and assumptions
 
+## Optional activity incentives — 2026-10-05
+
+- The user explicitly requested changing `AGENTS.md` after the conflict with the prior NFT/wallet/ad reward restrictions was explained. Optional NFT purchases, wallet connection and rewarded ad views are now authorized for local implementation as eligibility for capped activity rewards. This supersedes older scope statements on these features, including conditional-backlog language for the relevant local work.
+- Activity verification remains necessary for these rewards. Core points remain noncash and nontransferable; neither a purchase nor an ad view fabricates steps or establishes activity completion. The existing daily/weekly base rules continue until a separately versioned bonus implementation exists; this document does not invent multipliers, prices or new caps.
+- The core may consume a minimum verified eligibility result from a separate wallet/NFT verification boundary. The independent Lab retains separate identities/database and synthetic tasks only. Sponsor services must not receive health data, wallet addresses or reusable core identities; completion verification uses single-use, purpose-limited proofs.
+- This session implements the instruction change only. It does not activate a payment/ad provider, connect a wallet, broadcast a transaction, modify live reward rules or establish human/platform approval. The next implementation slice and remaining evidence are recorded in `IMPLEMENTATION_STATUS.md`.
+
+## Earlier decisions
+
 - Empty repository was confirmed before scaffolding. The subsequently supplied kit was preserved; its 58 IDs and B/C ownership assignments remain authoritative.
 - Use a pnpm TypeScript monorepo and Supabase PostgreSQL/Auth. One backend owner controls migrations, with separate worktrees for native and domain work.
 - Pin Node 24.19.0 and pnpm 11.19.0. This matches the bundled pnpm runtime used for verification. System Node 25.6.1 is not the intended project runtime.
@@ -34,3 +43,24 @@ Official references checked during setup: [Expo SDK compatibility](https://docs.
 - One fixed generic calendar request contains no account, health or reward fields. Quiet-time rules apply to the selected Hong Kong clock time; OS Focus/permission/suppression affects actual delivery. There is no remote wake/cancel channel: other-device changes apply on foreground reconciliation. Never claim delivery from a scheduled-request result.
 - Optional notification errors remain feature-scoped; actual auth/session failures still close access. A notification cleanup error cannot prevent authenticated deletion. SecureStore corruption is explicit rather than treated as absent state.
 - Expo's automatic notification configuration initially enabled APNs. The local-only config plugin removes push entitlement/background mode; a second actual prebuild confirmed their absence while retaining HealthKit. This is generation evidence, not compiled/signed device evidence.
+
+
+## 2026-10-05 — X to Earn as the current mobile product flow
+
+The operator asked to continue X to Earn and revise the app. With no replacement reward or activity rules supplied, this revision retains the agreed P0 step tiers, weekly bonus and nontransferable/noncash points. It improves the complete mobile earning journey; it does not reinterpret the earlier token-economics proposal as authorization to pay for health activity in cryptocurrency. Additional training metrics, real merchant benefits and independent synthetic Web3 work remain separate decisions.
+
+Canonical progression comes from the existing mission RPC under its existing account lock. We extend its response instead of constructing weekly achievement from seven-day local readings or posted daily awards: neither local data nor daily-claim status defines the accepted weekly entitlement. Pending corrections remain visible without replacing accepted history. Preview and posted values use separate labels; a closed/restarted client can claim an already accepted server summary without re-uploading health readings. Business uniqueness and the server deadline remain authoritative.
+
+Preserve Expo55/React Native0.83, the current local native HealthKit module, controllers and four-tab architecture. No dependency upgrade or navigation-framework migration is needed for this change. The Expo Native UI skill's SDK56-specific package suggestions are not applied to the current supported SDK55 stack; its missing optional expo-ui skill does not block retaining working native Switch/TextInput/Pressable controls. Shared spacing, wrapping, readable status text, accessible progress values and action labels are implemented. Native runtime/layout evidence must be recorded separately.
+
+The initial lint failure came from the old GitHub-verification checkout in ignored `.local/`. Excluding ignored runtime/backup artifacts and pinning `tsconfigRootDir` fixes ambiguity while still checking every active source/test file. The archived checkout is preserved. No test exclusion was added to the Vitest configuration.
+
+
+End-of-session scope observation: another workspace change amended root `AGENTS.md` to allow optional NFT/wallet/rewarded-ad activity incentives, and added a matching status note. Those concurrent files and business-proposal changes were preserved. The code and evidence in this entry cover the base earning loop only; the amendment does not constitute implementation or provider/device verification. Versioned bonus criteria, total caps, isolated eligibility verification and refund/withdrawal behavior still need their own reviewed slice. Existing health/sponsor separation and external-action gates remain effective.
+# Adopted iOS release policy — 2026-10-05
+
+The user authorized implementing the researched Hong Kong App Store plan across the app. First release provides read-only health activity, existing capped noncash points and server-derived personal achievements. It does not ship optional NFT purchases/wallet boosts, crypto conversion, unimplemented rewarded ads or StoreKit purchases. Future closed-loop ad cosmetics/StoreKit content/read-only collection display require independently verified providers and an explicit new release; no remote flag can activate them.
+
+Preserve the existing architecture, base awards, all 58 IDs and B/C ownership. P16's current acceptance amendment is personal habit achievements rather than a new demo-voucher shop; P17 retains historical demo records/refunds and prevents new shipping-build spending. P15 keeps canonical point history; P25/P26 retain consent/deletion and account isolation; P31/P32 add transitive shipping checks and accurate privacy/review materials. These are implementation evidence amendments, not new human acceptance or changes to the original register. P23/P24 and deferred paid/provider integrations remain unimplemented.
+
+Badge status is calculated from corrected posted awards, not live local step previews. The native app rejects a missing/mismatched shipping capability contract for sync/claims, but privacy/export/delete/logout/help/history remain usable under their existing authentication rules. The capability check is an attestation of fixed code behavior, not feature enablement. A demo backend cannot attest the shipping contract. No duplicate points or mutable badge ledger is introduced.

@@ -4,6 +4,15 @@ export async function runAccountSequence(steps: readonly (() => Promise<unknown>
   for (const step of steps) { assertCurrent(); await step(); assertCurrent(); }
 }
 
+/** A mutation or newer read invalidates older compound server snapshots before publication. */
+export function createSnapshotGate() {
+  let generation = 0;
+  return {
+    invalidate: () => { generation++; },
+    beginRead: () => { const current = ++generation; return () => current === generation; },
+  };
+}
+
 /** Optional reminder cleanup cannot prevent authenticated account deletion. */
 export async function runDeletionSequence(steps: {
   reauthenticate: () => Promise<unknown>;

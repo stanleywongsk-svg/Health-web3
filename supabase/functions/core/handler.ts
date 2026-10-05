@@ -5,6 +5,7 @@ import {
   pointsSummarySchema, ledgerPageSchema, appealPageSchema, adminReviewPageSchema,
   proposeAppealSchema, decideAppealSchema, proposeAppealResultSchema, decideAppealResultSchema,
   notificationPreferencesSchema, setNotificationPreferencesSchema,
+  missionsResultSchema, releasePolicySchema, badgesResultSchema,
 } from '@healthloop/domain';
 import { demoActivitySyncSchema } from '@healthloop/domain/synthetic';
 
@@ -110,7 +111,13 @@ export function createCoreHandler(config:CoreConfig,deps:Dependencies):(req:Requ
         || (req.method==='POST' && (path==='/admin/adjustments' || /^\/admin\/adjustments\/[^/]+\/decision$/.test(path)));
       if(config.buildMode==='demo' && reviewRoute) throw new ApiError('NOT_SUPPORTED');
       let name:string; let args:Record<string,unknown>={}; let resultSchema:z.ZodType|undefined;
-      if(req.method==='POST' && path==='/activity/sync') {
+      if(req.method==='GET' && path==='/app/capabilities') {
+        // A synthetic server must never attest the shipping iOS policy.
+        if(config.buildMode==='demo') throw new ApiError('NOT_SUPPORTED');
+        z.strictObject({}).parse(queryInput(url));name='hl_app_capabilities';resultSchema=releasePolicySchema;
+      } else if(req.method==='GET' && path==='/badges') {
+        z.strictObject({}).parse(queryInput(url));name='hl_badges';resultSchema=badgesResultSchema;
+      } else if(req.method==='POST' && path==='/activity/sync') {
         const input=(config.buildMode==='demo'?demoActivitySyncSchema:activitySyncSchema).parse(await jsonBody(req));
         name='hl_sync_activity'; args={p_task_date:input.taskDate,p_eligible_steps:input.eligibleSteps,p_source_category:input.sourceCategory,
           p_source_policy:input.sourcePolicy,p_source_pin_token:input.sourcePinToken,p_revision:input.revision,p_observed_at:input.observedAt,p_timezone:input.timezone};
@@ -127,19 +134,19 @@ export function createCoreHandler(config:CoreConfig,deps:Dependencies):(req:Requ
           && p.quietStart===i.quietStart && p.quietEnd===i.quietEnd && p.timezone===i.timezone);
       }
       else if(req.method==='GET' && path==='/health/summary') name='hl_health_summary';
-      else if(req.method==='GET' && path==='/missions') name='hl_missions';
+      else if(req.method==='GET' && path==='/missions') { z.strictObject({}).parse(queryInput(url)); name='hl_missions'; resultSchema=missionsResultSchema; }
       else if(req.method==='GET' && path==='/points/summary') { name='hl_points_summary';resultSchema=pointsSummarySchema; }
       else if(req.method==='GET' && path==='/points/ledger') {
         const i=ledgerQuery.parse(queryInput(url));name='hl_ledger';args={p_limit:i.limit,p_cursor:i.cursor??null};resultSchema=ledgerPageSchema;
       } else if(req.method==='POST' && /^\/missions\/[^/]+\/claim$/.test(path)) {
         const id=z.uuid().parse(path.split('/')[2]); const i=claimSchema.parse(await jsonBody(req));name='hl_claim';args={p_instance_id:id,p_idempotency_key:i.idempotencyKey};
       } else if(req.method==='GET' && path==='/rewards') {
-        z.strictObject({}).parse(queryInput(url));name='hl_rewards';resultSchema=rewardsResultSchema;
+        z.strictObject({}).parse(queryInput(url));name=config.buildMode==='real'?'hl_release_rewards':'hl_rewards';resultSchema=config.buildMode==='real'?rewardsResultSchema.refine(r=>r.items.length===0):rewardsResultSchema;
       }
       else if(req.method==='GET' && path==='/redemptions') {
         const i=redemptionQuery.parse(queryInput(url));name='hl_redemptions';args={p_limit:i.limit,p_cursor:i.cursor??null};resultSchema=redemptionPageSchema;
       } else if(req.method==='POST' && path==='/redemptions') {
-        const i=redeemRewardSchema.parse(await jsonBody(req));name='hl_redeem';args={p_reward_id:i.rewardId,p_idempotency_key:i.idempotencyKey};resultSchema=redeemResultSchema;
+        const i=redeemRewardSchema.parse(await jsonBody(req));name=config.buildMode==='real'?'hl_reconcile_redemption':'hl_redeem';args={p_reward_id:i.rewardId,p_idempotency_key:i.idempotencyKey};resultSchema=redeemResultSchema;
       } else if(req.method==='POST' && /^\/redemptions\/[^/]+\/cancel$/.test(path)) {
         const id=z.uuid().parse(path.split('/')[2]);z.strictObject({}).parse(await jsonBody(req));name='hl_cancel_redemption';args={p_redemption_id:id};resultSchema=cancelRedemptionResultSchema;
       } else if(req.method==='POST' && path==='/appeals') {

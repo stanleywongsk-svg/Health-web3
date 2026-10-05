@@ -1,3 +1,13 @@
+# Latest continuation note — 2026-10-05
+
+Read `AGENTS.md`, `IMPLEMENTATION_STATUS.md` and the latest `TEST_EVIDENCE.md` first. The user adopted the App Store health/points/achievement first release, superseding the earlier optional NFT/wallet native bonus amendment. Do not restore the demo shop or add wallet/NFT earning boosts. Onboarding/home/missions/points/profile, fixed capability checks and server-derived badges are implemented. Current migrations end with `202610050001_mission_progress.sql` and `202610050002_store_release.sql`; apply schema before the new strict APIs. No advertising, payment or collection-view provider exists in this build. Deferred monetization must be separately implemented and verified without remote silent enablement.
+
+Latest final automated results: 434 unit tests / 24 files, 75 SQL groups, 27 cross-layer tests, 38 Edge/worker tests and seven real local HTTP groups. These include policy mismatch, corrected badges, blocked fresh demo spending, old receipts/refunds, stale-account failures, sync-to-claim policy revalidation and stale compound-snapshot suppression. The local Docker wrapper handles bounded container-replacement races without bypassing isolation. Read the newest evidence for native build/signature details and cleanup; no count substitutes for device acceptance.
+
+The next concrete acceptance task is the unlocked simulator walkthrough of this source, followed by the two-iPhone HealthKit matrix with operator signing/backend setup. CUA again found the Mac locked; do not replace native interaction evidence with fabricated screenshots or mock data. `.local/store-release-20261005/` contains current build verification; the simulator derived directory is reused from `.local/earn-20261005/derived`. The final disposable SQL database is `healthloop_test_store_20261005_final`. Keep source/dependencies/volumes. Submission prerequisites and the privacy worksheet are in `APP_STORE_REVIEW_NOTES.md` / `APP_PRIVACY_DISCLOSURES.md`. There is no unattended continuation.
+
+The older instructions below remain useful where compatible; their counts and earlier UI paths are historical.
+
 # HealthLoop 本机／全新克隆接续 Prompt
 
 将下面正文交给下一次 Codex 会话，在当前仓库根目录执行。用户已改变清理策略：源码恢复到 `/Users/wi/healthloop`，`/Users/wi/web3 health` 是兼容符号链接；本机分支为 `codex/resume-core`。保留此目录，不再次删除。先检查本机 git 状态；不要用较旧 GitHub 备份覆盖本机新提交。若换机器才从已核验远端克隆，并核对是否包含最新本机 checkpoint。旧临时数据库/Pods 仍不可假定存在。

@@ -124,3 +124,8 @@ Lab 属独立范围，不能借用核心健康身份、会话、数据库或真�
 较早源码备份及原始资料已在 [Health-web3](https://github.com/stanleywongsk-svg/Health-web3) 核验，历史清理已完成，详见 [GITHUB_BACKUP](GITHUB_BACKUP.md)。本次按用户新策略继续开发并准备已获批准的资料上传，**保留本机源码、依赖和本轮提交，上传后也不删除**。最新上传是否完成及覆盖哪些文件以该核验记录为准；不能用较旧远端覆盖本机新提交。资料上传与提案不授权生产变更、付费操作、链上广播或修改核心健康与代币的隔离边界。
 
 源码备份不包含私人 `.env`、真实数据、密钥、Pods、node_modules 或数据库。历史日志保存在 `docs/archive/environment-evidence`；它们不是当前 native 运行证明。设备配置与签署条件由操作者安全提供；本机接续不会自动在会话结束后运行。
+# Current iOS release amendment — 2026-10-05
+
+The user has since adopted and implemented the health/points/achievement first-release plan in `AGENTS.md`. Read the newest `IMPLEMENTATION_STATUS.md` and `TEST_EVIDENCE.md` before the historical register below. P16 now uses server-derived personal badges; P17 permits only historical demo reconciliation/cancellation/refunds in the shipping app. New demo-voucher spending, NFT/wallet reward boosts and unimplemented ad/payment providers are absent from the release. Future optional closed-loop ad cosmetics require a separate verified integration; the old blanket reward-ad wording below is not the current policy.
+
+The immutable 58-ID requirement register and B/C ownership remain unchanged. This amendment does not complete the remaining physical-device, signing, admin, processor/legal, production-operation or Apple review gates. `APP_STORE_REVIEW_NOTES.md` and `APP_PRIVACY_DISCLOSURES.md` describe the actual first-release handoff. Do not reintroduce the old demo storefront or implement future token conversion while resuming.

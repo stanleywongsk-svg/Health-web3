@@ -90,34 +90,89 @@ async function executable(name) {
   return fail('A real Docker executable must be available outside the project shim.');
 }
 
+// Errors expose fixed categories only: no executable paths, arguments, output or environment.
+export class LocalCommandError extends Error {
+  constructor(stage, reason, code, output = '') {
+    super(`Local backend verification failed (${stage}; ${reason}; exit ${Number.isInteger(code) ? code : 'unavailable'}).`);
+    this.name = 'LocalCommandError';
+    this.reason = reason;
+    // Only exact missing-container failures are allowed to supply selected inspect rows.
+    this.inspectedOutput = reason === 'missing-container' ? output : '';
+  }
+}
+function commandStage(args) {
+  if (args[0] === 'inspect') return 'Docker container inspection';
+  if (args[0] === 'ps') return 'Docker container listing';
+  if (args[0] === 'stop') return 'Docker container stop';
+  if (args[0] === 'network') return 'Docker network verification';
+  if (args[0] === 'context') return 'Docker endpoint verification';
+  if (args[0] === '--version') return 'Supabase CLI version verification';
+  return 'local command';
+}
+export function captureFailureReason(args, stderr) {
+  if (args[0] !== 'inspect' || args[1] !== '--format' || args.length < 4) return 'command-error';
+  const requested = new Set(args.slice(3));
+  if ([...requested].some(id => !/^[a-f0-9]{12,64}$/.test(id))) return 'command-error';
+  const lines = stderr.trim().split(/\r?\n/);
+  // Retry only an exact Docker response about one of the requested immutable IDs.
+  // Engine failures, policy failures and unexpected text never acquire retry semantics.
+  return lines.every(line => {
+    const match = /^(?:Error: No such object: |Error response from daemon: No such container: )([a-f0-9]{12,64})$/.exec(line);
+    return match && requested.has(match[1]);
+  }) ? 'missing-container' : 'command-error';
+}
 async function capture(command, args, env, timeout = 30_000) {
   return await new Promise((accept, reject) => {
-    const child = spawn(command, args, { cwd: root, env, stdio: ['ignore', 'pipe', 'ignore'] });
-    let output = ''; let tooLarge = false;
+    const child = spawn(command, args, { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] });
+    let output = ''; let stderr = ''; let tooLarge = false; let timedOut = false;
     child.stdout.on('data', (chunk) => {
       if (output.length + chunk.length > 2_000_000) { tooLarge = true; child.kill('SIGTERM'); } else output += chunk.toString();
     });
+    child.stderr.on('data', (chunk) => {
+      if (stderr.length + chunk.length > 32_768) { tooLarge = true; child.kill('SIGTERM'); } else stderr += chunk.toString();
+    });
     let killTimer;
-    const timer = setTimeout(() => { child.kill('SIGTERM'); killTimer = setTimeout(() => child.kill('SIGKILL'), 2_000); }, timeout);
-    child.once('error', () => { clearTimeout(timer); clearTimeout(killTimer); reject(new Error('Local backend command could not start.')); });
-    child.once('exit', (code) => {
+    const timer = setTimeout(() => { timedOut = true; child.kill('SIGTERM'); killTimer = setTimeout(() => child.kill('SIGKILL'), 2_000); }, timeout);
+    child.once('error', () => { clearTimeout(timer); clearTimeout(killTimer); reject(new LocalCommandError(commandStage(args), 'could-not-start', null)); });
+    // close waits for buffered stdout/stderr; exit can precede stream delivery.
+    child.once('close', (code) => {
       clearTimeout(timer);
       clearTimeout(killTimer);
-      if (code !== 0 || tooLarge) reject(new Error('Local backend verification command failed.'));
-      else accept(output.trim());
+      if (code !== 0 || tooLarge || timedOut) {
+        const reason = timedOut ? 'timeout' : tooLarge ? 'output-limit' : captureFailureReason(args, stderr);
+        reject(new LocalCommandError(commandStage(args), reason, code, output));
+      } else accept(output.trim());
     });
   });
 }
-
-async function ownedContainers(docker, env) {
-  const listed = await capture(docker, ['ps', '-a', '--filter', `name=^/supabase_[a-z0-9_]+_${PROJECT_ID}$`, '--format', '{{.ID}}'], env);
-  const ids = listed ? listed.split(/\r?\n/) : [];
-  if (ids.some((id) => !/^[a-f0-9]{12,64}$/.test(id))) fail('Unexpected Docker container identity.');
-  if (!ids.length) return { ids, containers: [] };
-  const raw = await capture(docker, ['inspect', '--format', inspectFormat, ...ids], env);
-  const containers = raw.split(/\r?\n/).map((line) => JSON.parse(line));
+function inspectedContainers(raw) {
+  const containers = raw.trim() ? raw.trim().split(/\r?\n/).map((line) => JSON.parse(line)) : [];
   if (containers.some((item) => item.projectLabel !== PROJECT_ID)) fail('A matching Docker name is not owned by this project.');
-  return { ids, containers };
+  // Validate successful partial rows before retrying a replacement race. An unsafe
+  // publication cannot disappear into a subsequent good snapshot unnoticed.
+  assertLoopbackContainers(containers);
+  return containers;
+}
+export async function ownedContainers(docker, env, run = capture) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const listed = await run(docker, ['ps', '-a', '--filter', `name=^/supabase_[a-z0-9_]+_${PROJECT_ID}$`, '--format', '{{.ID}}'], env);
+    const ids = listed ? listed.split(/\r?\n/) : [];
+    if (ids.some((id) => !/^[a-f0-9]{12,64}$/.test(id))) fail('Unexpected Docker container identity.');
+    if (!ids.length) return { ids, containers: [] };
+    try {
+      const raw = await run(docker, ['inspect', '--format', inspectFormat, ...ids], env);
+      const containers = inspectedContainers(raw);
+      if (containers.length !== ids.length) fail('Docker inspection returned an incomplete snapshot.');
+      return { ids, containers };
+    } catch (error) {
+      if (!(error instanceof LocalCommandError) || error.reason !== 'missing-container') throw error;
+      inspectedContainers(error.inspectedOutput);
+      if (attempt === 2) fail('Docker container replacement did not settle within three verification attempts.');
+      // Supabase replaces Edge runtime during functions serve. Re-list immutable IDs;
+      // never skip an inspection, assume ownership or retry a general engine failure.
+    }
+  }
+  return fail('Docker container verification did not complete.');
 }
 
 export function validateNetworkMetadata(info) {

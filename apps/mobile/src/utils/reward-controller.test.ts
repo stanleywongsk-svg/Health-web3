@@ -85,6 +85,14 @@ describe('mobile demonstration reward controller',()=>{
     c.setContext({accountId:'a',verified:true,redeemAllowed:false});f.api.redeemReward.mockRejectedValueOnce(new CoreApiError('CONSENT_REQUIRED',403));await expect(c.retry()).rejects.toMatchObject({code:'CONSENT_REQUIRED'});
     expect(c.getSnapshot().pending).toMatchObject({idempotencyKey:key});expect(f.data.has(rewardIntentKey('a'))).toBe(true);expect(f.randomUUID).toHaveBeenCalledTimes(1);
   });
+  it('clears a definitively uncommitted legacy intent after the shipping policy disables new demonstrations',async()=>{
+    const f=fixture();f.data.set(rewardIntentKey('a'),JSON.stringify({version:1,kind:'redeem',rewardId,idempotencyKey:key,stage:'request'}));
+    const c=f.make();c.setContext({accountId:'a',verified:true,redeemAllowed:false});await c.refresh();
+    f.api.redeemReward.mockRejectedValue(new CoreApiError('NOT_SUPPORTED',404));
+    await expect(c.retry()).rejects.toMatchObject({code:'NOT_SUPPORTED'});
+    expect(c.getSnapshot().pending).toBeNull();expect(f.data.has(rewardIntentKey('a'))).toBe(false);expect(f.randomUUID).not.toHaveBeenCalled();
+    expect(c.getSnapshot().points?.availablePoints).toBe(50);
+  });
   it('does not post a new redemption if intent persistence fails',async()=>{
     const f=fixture();const c=f.make();await c.refresh();f.storage.setItem=async()=>{throw new Error('keychain unavailable')};await expect(c.redeem(rewardId)).rejects.toThrow();expect(f.api.redeemReward).not.toHaveBeenCalled();
   });

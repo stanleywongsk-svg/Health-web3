@@ -12,6 +12,7 @@ import { promisify } from 'node:util';
 import pg from 'pg';
 import { it } from 'vitest';
 import { createCoreClient } from '../packages/api-client/src/index.ts';
+import { IOS_RELEASE_POLICY } from '../packages/domain/src/release-policy.ts';
 import { extractEmailOtp, FIXTURE_LABEL, loadLocalStack, LOCAL_PROJECT, syntheticEmail } from './local-stack.ts';
 
 const runFile = promisify(execFile);
@@ -163,6 +164,8 @@ async function exerciseLocalStack() {
     requireCheck((await a.api.getConsents()).profile === null, 'A new authenticated account did not require onboarding.');
     await a.api.setConsents(consent);
     await b.api.setConsents({ ...consent, localRead: false, cloudSync: false });
+    requireCheck(same(await a.api.getCapabilities(), IOS_RELEASE_POLICY), 'Served real-mode release policy did not match the fixed shipping contract.');
+    requireCheck((await a.api.getBadges()).items.every(badge => !badge.earned && badge.earnedOn === null), 'An empty account received an achievement.');
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Hong_Kong', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     // Native-shaped schema fixture only. No HealthKit source was queried or verified.
     const activity = { taskDate: today, eligibleSteps: 3000, sourceCategory: 'apple_phone', sourcePolicy: 'single-approved-source-v1', sourcePinToken: randomUUID(), revision: 1, observedAt: new Date().toISOString(), timezone: 'Asia/Hong_Kong' };
@@ -174,6 +177,16 @@ async function exerciseLocalStack() {
     requireCheck(ledger.items.length === 1 && ledger.items[0].points === 10 && (await a.api.getPointsSummary()).balance === 10, 'Ledger did not reconcile to one server award.');
     requireCheck((await a.api.getMissions()).items.some(item => item.id === accepted.instanceId), 'Claimed mission was missing from the typed list.');
     pass('typed consent, synthetic native-shaped summary, mission claim, identical retry and immutable ledger over real HTTP');
+
+    const badges = await a.api.getBadges();
+    requireCheck(badges.items.some(badge => badge.id === 'first_steps' && badge.earned && badge.earnedOn === today)
+      && badges.items.some(badge => badge.id === 'consistent_week' && !badge.earned), 'Badges did not reflect the canonical daily award.');
+    requireCheck((await b.api.getBadges()).items.every(badge => !badge.earned), 'Another account received the subject achievement.');
+    requireCheck((await a.api.getRewards()).items.length === 0, 'The real-mode app exposed a demonstration catalogue.');
+    await rejectsCode(() => a.api.redeemReward({ rewardId: randomUUID(), idempotencyKey: randomUUID() }), 'NOT_SUPPORTED');
+    requireCheck((await a.api.getPointsSummary()).balance === 10 && (await a.api.getLedger()).items.length === 1,
+      'Achievement reads or blocked spending changed the ledger.');
+    pass('fixed release capabilities, private canonical badges, empty shipping catalogue and blocked new demo spending');
 
     await rejectsCode(() => b.api.syncActivity(activity), 'CONSENT_REQUIRED');
     await b.api.setConsents(consent);
@@ -215,6 +228,8 @@ async function exerciseLocalStack() {
     requireCheck(deletionA.status === 'deletion_requested' && deletionB.status === 'deletion_requested', 'Recent real OTP did not authorize deletion.');
     requireCheck(same(await a.api.deleteAccount(), deletionA), 'Deletion request retry changed its durable job.');
     await rejectsCode(() => a.api.getPointsSummary(), 'ACCOUNT_INACTIVE');
+    await rejectsCode(() => a.api.getCapabilities(), 'ACCOUNT_INACTIVE');
+    await rejectsCode(() => a.api.getBadges(), 'ACCOUNT_INACTIVE');
     await rejectsCode(() => b.api.syncActivity(activity), 'ACCOUNT_INACTIVE');
     // Exercise the real recovery boundary: purge and Auth removal committed, but
     // completion has not run. The production worker must tolerate user_not_found.
